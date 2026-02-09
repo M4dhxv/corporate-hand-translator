@@ -1,0 +1,222 @@
+import { useState, useRef, useCallback, useEffect } from 'react';
+import VideoFeed from './components/VideoFeed';
+import PhraseOverlay from './components/PhraseOverlay';
+
+/**
+ * Main Application Component
+ * 
+ * Corporate Signal Translator:
+ * A satirical web app that translates hand gestures into corporate jargon.
+ * Uses MediaPipe Hands for real-time hand tracking and gesture detection.
+ * Features Text-to-Speech using Web Speech API.
+ */
+function App() {
+    // Current detected phrase from gesture recognition
+    const [currentPhrase, setCurrentPhrase] = useState('Waiting for input…');
+
+    // Current detected gesture name (for UI display)
+    const [gestureType, setGestureType] = useState(null);
+
+    // Loading state for MediaPipe initialization
+    const [isLoading, setIsLoading] = useState(true);
+
+    // TTS enabled state
+    const [ttsEnabled, setTtsEnabled] = useState(true);
+
+    // Ref to track last spoken phrase to avoid repetition
+    const lastSpokenRef = useRef('');
+
+    // Ref to track current TTS state (avoids stale closure)
+    const ttsEnabledRef = useRef(ttsEnabled);
+
+    // Keep ref in sync with state
+    useEffect(() => {
+        ttsEnabledRef.current = ttsEnabled;
+        // Cancel speech when TTS is turned off
+        if (!ttsEnabled) {
+            window.speechSynthesis.cancel();
+        }
+    }, [ttsEnabled]);
+
+    /**
+     * Speak a phrase using Web Speech API
+     */
+    const speakPhrase = useCallback((text) => {
+        // Use ref to get current TTS state
+        if (!ttsEnabledRef.current || !text || text === 'Waiting for input…') return;
+        if (text === lastSpokenRef.current) return;
+
+        // Cancel any ongoing speech
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.9; // Slightly slower for corporate gravitas
+        utterance.pitch = 1;
+        utterance.volume = 1;
+
+        // Try to use a professional-sounding voice
+        const voices = window.speechSynthesis.getVoices();
+        const englishVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'))
+            || voices.find(v => v.lang.startsWith('en'));
+        if (englishVoice) utterance.voice = englishVoice;
+
+        window.speechSynthesis.speak(utterance);
+        lastSpokenRef.current = text;
+    }, []);
+
+    /**
+     * Callback when a gesture is detected by the VideoFeed component
+     * @param {Object} gestureData - Contains phrase and gestureType
+     */
+    const handleGestureDetected = ({ phrase, gestureType }) => {
+        setCurrentPhrase(phrase);
+        setGestureType(gestureType);
+
+        // Speak the phrase if TTS is enabled
+        if (gestureType) {
+            speakPhrase(phrase);
+        }
+    };
+
+    /**
+     * Callback when MediaPipe finishes loading
+     */
+    const handleLoadingComplete = () => {
+        setIsLoading(false);
+    };
+
+    return (
+        <div className="min-h-screen flex flex-col">
+            {/* Header */}
+            <header className="py-6 px-4 sm:px-6 lg:px-8">
+                <div className="max-w-7xl mx-auto">
+                    <div className="flex items-center justify-center gap-3">
+                        {/* Logo icon */}
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-navy-500 to-navy-700 flex items-center justify-center shadow-lg glow">
+                            <svg
+                                className="w-7 h-7 text-white"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"
+                                />
+                            </svg>
+                        </div>
+
+                        {/* Title */}
+                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gradient tracking-tight">
+                            Corporate Signal Translator
+                        </h1>
+                    </div>
+
+                    {/* Subtitle */}
+                    <p className="text-center mt-3 text-slate-corp-400 text-sm sm:text-base max-w-2xl mx-auto">
+                        Transform your hand gestures into professional corporate speak.
+                        Perfect for synergizing cross-functional deliverables.
+                    </p>
+
+                    {/* TTS Toggle Button */}
+                    <div className="flex justify-center mt-4">
+                        <button
+                            onClick={() => setTtsEnabled(!ttsEnabled)}
+                            className={`
+                                flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
+                                transition-all duration-300
+                                ${ttsEnabled
+                                    ? 'bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30'
+                                    : 'bg-navy-700/50 text-slate-corp-400 border border-navy-600/30 hover:bg-navy-600/50'}
+                            `}
+                        >
+                            {ttsEnabled ? (
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                                </svg>
+                            ) : (
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                                </svg>
+                            )}
+                            {ttsEnabled ? 'Voice On' : 'Voice Off'}
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            {/* Main Content */}
+            <main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 pb-12">
+                <div className="w-full max-w-3xl">
+                    {/* Main Card Container */}
+                    <div className="glass-card p-4 sm:p-6 lg:p-8">
+                        {/* Loading Indicator */}
+                        {isLoading && (
+                            <div className="absolute inset-0 z-50 flex items-center justify-center bg-navy-900/80 backdrop-blur-sm rounded-2xl">
+                                <div className="text-center">
+                                    <div className="inline-block w-12 h-12 border-4 border-navy-500 border-t-white rounded-full animate-spin mb-4"></div>
+                                    <p className="text-white/80 text-sm">Initializing hand tracking...</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Video Feed with Canvas Overlay */}
+                        <div className="video-container relative">
+                            <VideoFeed
+                                onGestureDetected={handleGestureDetected}
+                                onLoadingComplete={handleLoadingComplete}
+                            />
+
+                            {/* Phrase Overlay (positioned at bottom of video) */}
+                            <PhraseOverlay
+                                phrase={currentPhrase}
+                                gestureType={gestureType}
+                            />
+                        </div>
+
+                        {/* Gesture Legend */}
+                        <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-center">
+                            {[
+                                { gesture: '✋', label: 'Open Palm' },
+                                { gesture: '✊', label: 'Fist' },
+                                { gesture: '👍', label: 'Thumbs Up' },
+                                { gesture: '☝️', label: 'Pointing' },
+                                { gesture: '✌️', label: 'Peace' },
+                            ].map((item, index) => (
+                                <div
+                                    key={item.label}
+                                    className={`
+                    p-3 rounded-lg bg-navy-800/50 border border-navy-600/30
+                    transition-all duration-300
+                    ${gestureType === item.label.toLowerCase().replace(' ', '-')
+                                            ? 'ring-2 ring-green-400 bg-navy-700/50 scale-105'
+                                            : 'hover:bg-navy-700/50'}
+                  `}
+                                >
+                                    <span className="text-2xl">{item.gesture}</span>
+                                    <p className="text-xs mt-1 text-slate-corp-400">{item.label}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Instructions */}
+                        <div className="mt-6 text-center text-sm text-slate-corp-400">
+                            <p>Show your hand to the camera to translate gestures into corporate wisdom.</p>
+                            <p className="mt-1 text-xs">Hand tracking powered by MediaPipe</p>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            {/* Footer */}
+            <footer className="py-4 px-4 text-center text-slate-corp-500 text-xs">
+                <p>© 2024 Corporate Signal Translator • Synergizing Human-AI Collaboration</p>
+            </footer>
+        </div>
+    );
+}
+
+export default App;
