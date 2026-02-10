@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.1.1] — 2026-02-10
+
+### 🐛 Fixed
+- **Deployment TTS Failure**: Fixed an issue where Text-to-Speech would fail in production or on new devices due to uninitialized voices or strict browser autoplay policies.
+    - Added explicit **voice loading** handling for Chrome/Chromium (`onvoiceschanged`).
+    - Added **TTS engine priming**: Clicking "Voice On" now triggers a silent utterance to unlock the audio context.
+
+---
+
 ## [3.1.0] — 2026-02-10
 
 ### 🐛 Fixed

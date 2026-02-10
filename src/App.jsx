@@ -25,6 +25,9 @@ function App() {
     // TTS enabled state
     const [ttsEnabled, setTtsEnabled] = useState(true);
 
+    // State for available voices
+    const [voices, setVoices] = useState([]);
+
     // Training Mode state
     const [trainingMode, setTrainingMode] = useState(false);
 
@@ -46,8 +49,30 @@ function App() {
         // Cancel speech when TTS is turned off
         if (!ttsEnabled) {
             window.speechSynthesis.cancel();
+        } else {
+            // Prime the TTS engine with a silent utterance (fixes user gesture requirements on some browsers)
+            const silentUtterance = new SpeechSynthesisUtterance('');
+            silentUtterance.volume = 0;
+            window.speechSynthesis.speak(silentUtterance);
         }
     }, [ttsEnabled]);
+
+    // Load voices on mount
+    useEffect(() => {
+        const loadVoices = () => {
+            const availableVoices = window.speechSynthesis.getVoices();
+            if (availableVoices.length > 0) {
+                setVoices(availableVoices);
+            }
+        };
+
+        loadVoices();
+
+        // Chrome requires this event listener
+        if (window.speechSynthesis.onvoiceschanged !== undefined) {
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+        }
+    }, []);
 
     /**
      * Speak a phrase using Web Speech API
@@ -66,10 +91,10 @@ function App() {
         utterance.pitch = 1;
         utterance.volume = 1;
 
-        // Try to use a professional-sounding voice
-        const voices = window.speechSynthesis.getVoices();
+        // Try to use a professional-sounding voice from state
         const englishVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'))
             || voices.find(v => v.lang.startsWith('en'));
+
         if (englishVoice) utterance.voice = englishVoice;
 
         utterance.onerror = (e) => {
@@ -80,7 +105,7 @@ function App() {
 
         window.speechSynthesis.speak(utterance);
         lastSpokenRef.current = text;
-    }, []);
+    }, [voices]);
 
     /**
      * Callback when a gesture is detected by the VideoFeed component
