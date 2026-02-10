@@ -34,6 +34,9 @@ function App() {
     // Ref to track current TTS state (avoids stale closure)
     const ttsEnabledRef = useRef(ttsEnabled);
 
+    // Ref to track last gesture time for throttling (prevents flickering)
+    const lastGestureTimeRef = useRef(0);
+
     // Shared landmarks ref — written by useHandTracking, read by TrainingMode
     const landmarksRef = useRef(null);
 
@@ -50,15 +53,16 @@ function App() {
      * Speak a phrase using Web Speech API
      */
     const speakPhrase = useCallback((text) => {
-        // Use ref to get current TTS state
         if (!ttsEnabledRef.current || !text || text === 'Waiting for input…') return;
+
+        // Prevent repeating the same phrase immediately
         if (text === lastSpokenRef.current) return;
 
-        // Cancel any ongoing speech
+        // Cancel any ongoing speech to keep it snappy
         window.speechSynthesis.cancel();
 
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 0.9; // Slightly slower for corporate gravitas
+        utterance.rate = 0.9;
         utterance.pitch = 1;
         utterance.volume = 1;
 
@@ -67,6 +71,12 @@ function App() {
         const englishVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'))
             || voices.find(v => v.lang.startsWith('en'));
         if (englishVoice) utterance.voice = englishVoice;
+
+        utterance.onerror = (e) => {
+            if (e.error !== 'interrupted') {
+                console.error('TTS Error:', e);
+            }
+        };
 
         window.speechSynthesis.speak(utterance);
         lastSpokenRef.current = text;
@@ -80,9 +90,16 @@ function App() {
         setCurrentPhrase(phrase);
         setGestureType(gestureType);
 
-        // Speak the phrase if TTS is enabled
+        // Speak the phrase if TTS is enabled, but throttle it to avoid flickering
+        // Only speak if we have a valid gesture
         if (gestureType) {
-            speakPhrase(phrase);
+            const now = Date.now();
+            // 500ms throttle: waits for the user to hold the new gesture for a moment
+            // (or prevents rapid firing if the model flickers between gestures)
+            if (now - lastGestureTimeRef.current > 500) {
+                speakPhrase(phrase);
+                lastGestureTimeRef.current = now;
+            }
         }
     };
 

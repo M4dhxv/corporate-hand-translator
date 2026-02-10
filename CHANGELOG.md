@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.1.0] — 2026-02-10
+
+### 🐛 Fixed
+- **TTS Silence/Stuttering**: Implemented a 500ms stability filter (throttle) in `App.jsx` to prevent gesture flickering from rapidly canceling speech. Text-to-speech now speaks smoothly even if detection jitters.
+- **Console Noise**: Removed verbose TTS debugging logs from production code.
+
+---
+
 ## [3.0.0] — 2026-02-10
 
 ### 🎓 Training Mode — Browser-Side Gesture Personalization

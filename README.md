@@ -3,7 +3,7 @@
 > *Translate your hand gestures into peak corporate jargon — powered by AI, running entirely in your browser.*
 
 [![Live Demo](https://img.shields.io/badge/demo-live-brightgreen?style=flat-square)](https://corporate-hand-translator.vercel.app)
-[![Version](https://img.shields.io/badge/version-3.0.0-blue?style=flat-square)](#changelog)
+[![Version](https://img.shields.io/badge/version-3.1.0-blue?style=flat-square)](#changelog)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![TensorFlow.js](https://img.shields.io/badge/TensorFlow.js-v4.17-orange?style=flat-square&logo=tensorflow)](https://www.tensorflow.org/js)
 [![Vercel](https://img.shields.io/badge/deployed%20on-Vercel-black?style=flat-square&logo=vercel)](https://vercel.com)
