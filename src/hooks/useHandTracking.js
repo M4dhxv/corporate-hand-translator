@@ -1,9 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { classifyGesture } from '../utils/gestureClassifier';
+import { loadGestureModel, predictGesture } from '../ml/gestureModel';
 
 /**
- * Custom React Hook for Hand Tracking
- * Uses MediaPipe Hands loaded from CDN for production compatibility.
+ * Custom React Hook for Hand Tracking with ML Gesture Classification
+ * 
+ * Pipeline:
+ * 1. MediaPipe Hands (CDN) → detects 21 hand landmarks per frame
+ * 2. TensorFlow.js model → classifies landmarks into gesture labels
+ * 3. Sends gesture + corporate phrase to parent via callback
+ * 
+ * MediaPipe loads from CDN for Vite production build compatibility.
+ * TF.js model loads from /model/model.json (static asset in public/).
  */
 function useHandTracking({ videoRef, canvasRef, onGestureDetected, onLoadingComplete }) {
     const [isInitialized, setIsInitialized] = useState(false);
@@ -22,7 +29,7 @@ function useHandTracking({ videoRef, canvasRef, onGestureDetected, onLoadingComp
         const canvas = canvasRef.current;
         if (!video || !canvas) return;
 
-        // Draw hand landmarks
+        // ── Draw hand landmarks on canvas overlay ──
         const drawLandmarks = (ctx, landmarks, width, height) => {
             ctx.clearRect(0, 0, width, height);
 
@@ -35,6 +42,7 @@ function useHandTracking({ videoRef, canvasRef, onGestureDetected, onLoadingComp
                 [5, 9], [9, 13], [13, 17], [0, 17]
             ];
 
+            // Skeleton lines
             ctx.strokeStyle = '#00ff88';
             ctx.lineWidth = 3;
             connections.forEach(([s, e]) => {
@@ -44,6 +52,7 @@ function useHandTracking({ videoRef, canvasRef, onGestureDetected, onLoadingComp
                 ctx.stroke();
             });
 
+            // Landmark dots
             landmarks.forEach(lm => {
                 const x = (1 - lm.x) * width;
                 const y = lm.y * height;
@@ -54,7 +63,7 @@ function useHandTracking({ videoRef, canvasRef, onGestureDetected, onLoadingComp
             });
         };
 
-        // Load MediaPipe from CDN (works in production)
+        // ── Load CDN script helper ──
         const loadScript = (src) => {
             return new Promise((resolve, reject) => {
                 if (document.querySelector(`script[src="${src}"]`)) {
@@ -70,15 +79,19 @@ function useHandTracking({ videoRef, canvasRef, onGestureDetected, onLoadingComp
             });
         };
 
+        // ── Main initialization ──
         const init = async () => {
             try {
-                // Load MediaPipe scripts from CDN
+                // Load MediaPipe from CDN (production compatible)
                 await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js');
                 await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js');
-
-                // Wait a tick for scripts to initialize
                 await new Promise(r => setTimeout(r, 100));
 
+                // Load TF.js gesture model (from /public/model/)
+                await loadGestureModel();
+                console.log('✅ ML gesture model ready');
+
+                // Initialize MediaPipe Hands
                 const hands = new window.Hands({
                     locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
                 });
@@ -90,6 +103,7 @@ function useHandTracking({ videoRef, canvasRef, onGestureDetected, onLoadingComp
                     minTrackingConfidence: 0.5
                 });
 
+                // ── Frame processing: landmarks → ML → gesture ──
                 hands.onResults((results) => {
                     const ctx = canvas.getContext('2d');
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -99,9 +113,12 @@ function useHandTracking({ videoRef, canvasRef, onGestureDetected, onLoadingComp
                         setIsHandDetected(true);
                         drawLandmarks(ctx, landmarks, canvas.width, canvas.height);
 
-                        const { gestureType, phrase } = classifyGesture(landmarks);
-                        if (gestureType !== lastGestureRef.current) {
-                            lastGestureRef.current = gestureType;
+                        // ML classification (replaces rule-based classifier)
+                        const { gestureType, phrase } = predictGesture(landmarks);
+
+                        const gestureKey = gestureType || 'none';
+                        if (gestureKey !== lastGestureRef.current) {
+                            lastGestureRef.current = gestureKey;
                             onGestureDetected?.({ phrase, gestureType });
                         }
                     } else {
@@ -115,6 +132,7 @@ function useHandTracking({ videoRef, canvasRef, onGestureDetected, onLoadingComp
 
                 handsRef.current = hands;
 
+                // Initialize camera
                 const camera = new window.Camera(video, {
                     onFrame: async () => {
                         if (handsRef.current) {
