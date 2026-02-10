@@ -1,37 +1,104 @@
 # Corporate Signal Translator 🖐️💼
 
-A satirical web app that translates hand gestures into corporate jargon using MediaPipe hand tracking and Web Speech API.
+> *Translate your hand gestures into peak corporate jargon — powered by AI, running entirely in your browser.*
 
-![Demo](https://img.shields.io/badge/demo-live-green)
+[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen?style=flat-square)](https://corporate-hand-translator.vercel.app)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue?style=flat-square)](#changelog)
+[![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
+[![TensorFlow.js](https://img.shields.io/badge/TensorFlow.js-v4.17-orange?style=flat-square&logo=tensorflow)](https://www.tensorflow.org/js)
+[![Vercel](https://img.shields.io/badge/deployed%20on-Vercel-black?style=flat-square&logo=vercel)](https://vercel.com)
 
-## Features
+---
 
-- 🎥 **Real-time hand tracking** using MediaPipe Hands
-- 🦴 **Skeleton overlay** with bright green landmarks
-- 💬 **Corporate phrase translation** for 5 gestures
-- 🔊 **Text-to-Speech** reads phrases aloud (toggleable)
-- 🎨 **Modern UI** with glass-morphism effects
+## ✨ What Is This?
 
-## Gesture Translations
+A satirical web app that uses **real-time hand tracking** and a **TensorFlow.js neural network** to detect your gestures and translate them into the finest corporate speak. No backend. No API keys. Just pure, client-side machine learning.
 
-| Gesture | Corporate Phrase |
-|---------|------------------|
-| ✋ Open Palm | "Let's put a pin in that for now." |
-| ✊ Closed Fist | "We need to circle back to the core deliverables." |
-| 👍 Thumbs Up | "I am fully aligned with this initiative." |
-| ☝️ Pointing Up | "Let's take this offline." |
-| ✌️ Peace Sign | "We have verified the cross-functional synergy." |
+Show your hand to the camera → AI detects the gesture → You get a corporate power phrase.
 
-## Tech Stack
+---
 
-- **React** + **Vite**
-- **Tailwind CSS**
-- **MediaPipe Hands**
-- **Web Speech API**
+## 🎯 Features
 
-## Getting Started
+| Feature | Description |
+|---------|-------------|
+| 🧠 **ML Gesture Recognition** | TensorFlow.js neural network classifies gestures in real-time |
+| 🎥 **Hand Tracking** | MediaPipe Hands detects 21 landmarks per hand at 30fps |
+| 🦴 **Skeleton Overlay** | Live hand skeleton visualization on the video feed |
+| 🔊 **Text-to-Speech** | Reads corporate phrases aloud (toggleable) |
+| 📱 **Responsive Design** | Glassmorphism UI that works on desktop and mobile |
+| ☁️ **Zero Backend** | Everything runs in the browser — deploy as static files |
+
+---
+
+## 🤝 Gesture Translations
+
+| Gesture | Emoji | Corporate Translation |
+|---------|-------|-----------------------|
+| Open Palm | ✋ | *"Let's put a pin in that for now."* |
+| Closed Fist | ✊ | *"We need to circle back to the core deliverables."* |
+| Thumbs Up | 👍 | *"I am fully aligned with this initiative."* |
+| Pointing Up | ☝️ | *"Let's take this offline."* |
+| Peace Sign | ✌️ | *"We have verified the cross-functional synergy."* |
+
+---
+
+## 🏗️ Architecture
+
+```
+Webcam → MediaPipe Hands → 21 Landmarks (x,y,z)
+    ↓
+Preprocessing → 63-float vector (normalized to wrist)
+    ↓
+TF.js Neural Network (63 → 128 → 64 → 5)
+    ↓
+Gesture Label + Confidence Score
+    ↓
+Corporate Phrase → UI + TTS
+```
+
+### ML Model Details
+
+| Property | Value |
+|----------|-------|
+| Input shape | `[1, 63]` — 21 landmarks × 3 coordinates |
+| Architecture | Dense(128, ReLU) → Dropout(0.3) → Dense(64, ReLU) → Dropout(0.2) → Dense(5, Softmax) |
+| Parameters | 16,773 |
+| Model size | ~67 KB |
+| Training accuracy | 100% |
+| Confidence threshold | 0.65 |
+| Inference time | < 5ms per frame |
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Framework** | React 18 + Vite 5 |
+| **Styling** | Tailwind CSS 3 |
+| **Hand Tracking** | MediaPipe Hands (CDN) |
+| **ML Inference** | TensorFlow.js 4.17 |
+| **Speech** | Web Speech API (native) |
+| **Hosting** | Vercel (static) |
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- **Node.js** 18+ and **npm**
+- A **webcam** (built-in or external)
+- A modern browser (Chrome, Edge, Firefox)
+
+### Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/M4dhxv/corporate-hand-translator.git
+cd corporate-hand-translator
+
 # Install dependencies
 npm install
 
@@ -41,12 +108,128 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173) and allow camera access.
 
-## Deployment
+### Building for Production
 
-Ready for deployment on **Vercel**:
+```bash
+npm run build
+npm run preview  # Preview the production build locally
+```
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/YOUR_USERNAME/corporate-hand-translator)
+---
 
-## License
+## 🧠 Model Training
 
-MIT
+The ML model is pre-trained and included in the repo (`public/model/`). To retrain:
+
+```bash
+# Generate synthetic data + train the neural network
+npm run train-model
+```
+
+This runs `scripts/trainModel.mjs`, which:
+1. Generates 4,000 synthetic hand landmark samples (800 per class)
+2. Trains a feed-forward neural network for 100 epochs
+3. Saves the model to `public/model/` as static assets
+
+> The training script uses synthetic data based on realistic hand poses. No external datasets or GPU required.
+
+---
+
+## 📁 Project Structure
+
+```
+corporate-hand-translator/
+├── public/
+│   └── model/                  # Trained TF.js model (static assets)
+│       ├── model.json          # Model topology + weights manifest
+│       └── group1-shard1of1.bin  # Model weights
+├── scripts/
+│   └── trainModel.mjs          # Offline model training script
+├── src/
+│   ├── ml/
+│   │   └── gestureModel.js     # Model loader + inference engine
+│   ├── hooks/
+│   │   └── useHandTracking.js  # MediaPipe + ML integration hook
+│   ├── components/
+│   │   ├── VideoFeed.jsx       # Camera feed + canvas overlay
+│   │   └── PhraseOverlay.jsx   # Gesture phrase display
+│   ├── utils/
+│   │   └── gestureClassifier.js  # Legacy rule-based classifier
+│   ├── App.jsx                 # Main application component
+│   ├── index.css               # Global styles + design system
+│   └── main.jsx                # Application entry point
+├── package.json
+├── vite.config.js
+├── tailwind.config.js
+├── vercel.json
+├── CHANGELOG.md
+└── LICENSE
+```
+
+---
+
+## ☁️ Deployment
+
+### Vercel (Recommended)
+
+The app is designed for Vercel's static hosting. Just push to GitHub — Vercel auto-deploys.
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/M4dhxv/corporate-hand-translator)
+
+### Any Static Host
+
+```bash
+npm run build
+# Upload the `dist/` folder to any static host (Netlify, GitHub Pages, etc.)
+```
+
+> **Note:** The ML model files in `public/model/` are automatically copied to `dist/model/` during build and served as static assets.
+
+---
+
+## 🔒 Privacy & Security
+
+- **All processing is client-side** — video frames and landmarks never leave your browser
+- **No data collection** — zero telemetry, zero analytics
+- **No API keys** — everything is open-source and self-contained
+- **Camera access** is only used for hand tracking and is not recorded
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Here's how:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-gesture`)
+3. Commit your changes (`git commit -m 'Add amazing gesture'`)
+4. Push to the branch (`git push origin feature/amazing-gesture`)
+5. Open a Pull Request
+
+### Adding New Gestures
+
+1. Add a new generator function in `scripts/trainModel.mjs`
+2. Add the class to `GESTURE_CLASSES` array
+3. Run `npm run train-model` to retrain
+4. Add phrase mapping in `src/ml/gestureModel.js`
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- [MediaPipe](https://mediapipe.dev/) by Google for hand landmark detection
+- [TensorFlow.js](https://www.tensorflow.org/js) for browser-based ML inference
+- [Vite](https://vitejs.dev/) for blazing-fast development
+- [Tailwind CSS](https://tailwindcss.com/) for utility-first styling
+
+---
+
+<p align="center">
+  <em>Built with ❤️ and excessive corporate synergy</em>
+</p>
