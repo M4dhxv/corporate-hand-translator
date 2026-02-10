@@ -1,8 +1,12 @@
 /**
  * gestureModel.js — Browser-side ML Gesture Classifier
  * 
- * Loads a pre-trained TensorFlow.js model from /model/ and runs
- * inference on MediaPipe hand landmarks entirely client-side.
+ * Loads a TensorFlow.js gesture model and runs inference on
+ * MediaPipe hand landmarks entirely client-side.
+ * 
+ * Model loading priority:
+ * 1. User-trained model from IndexedDB (personalized)
+ * 2. Default pre-trained model from /model/ (static asset)
  * 
  * Why browser ML?
  * - Zero server costs — runs on user's device
@@ -17,6 +21,7 @@
  */
 
 import * as tf from '@tensorflow/tfjs';
+import { loadUserModel } from './localModelManager';
 
 // ──────────────────────────────────────────────
 // Constants
@@ -59,6 +64,7 @@ const CONFIDENCE_THRESHOLD = 0.65;
 let cachedModel = null;
 let isLoading = false;
 let loadPromise = null;
+let isUserModel = false;
 
 // ──────────────────────────────────────────────
 // Public API
@@ -66,7 +72,11 @@ let loadPromise = null;
 
 /**
  * Load the gesture classification model.
- * Loads from /model/model.json (served as a static asset).
+ * 
+ * Priority:
+ * 1. User-trained model from IndexedDB (if exists)
+ * 2. Default model from /model/model.json (static asset)
+ * 
  * Model is cached — subsequent calls return immediately.
  * 
  * @returns {Promise<tf.LayersModel>} The loaded model
@@ -80,9 +90,18 @@ export async function loadGestureModel() {
     isLoading = true;
     loadPromise = (async () => {
         try {
-            // Load from public/model/ directory (Vite serves public/ at root)
-            cachedModel = await tf.loadLayersModel('/model/model.json');
-            console.log('🧠 TF.js gesture model loaded successfully');
+            // Try loading user-trained model from IndexedDB first
+            const userModel = await loadUserModel();
+            if (userModel) {
+                cachedModel = userModel;
+                isUserModel = true;
+                console.log('🧠 Using personalized gesture model from IndexedDB');
+            } else {
+                // Fall back to default model from public/model/
+                cachedModel = await tf.loadLayersModel('/model/model.json');
+                isUserModel = false;
+                console.log('🧠 Using default gesture model from /model/');
+            }
 
             // Warm up the model with a dummy prediction to initialize WebGL
             const dummy = tf.zeros([1, 63]);
@@ -101,6 +120,58 @@ export async function loadGestureModel() {
     })();
 
     return loadPromise;
+}
+
+/**
+ * Hot-swap the active model with a newly trained one.
+ * Used after in-browser training to apply the new model
+ * immediately without a page reload.
+ * 
+ * @param {tf.LayersModel} newModel - The freshly trained model
+ */
+export function swapModel(newModel) {
+    if (cachedModel && cachedModel !== newModel) {
+        cachedModel.dispose();
+    }
+    cachedModel = newModel;
+    isUserModel = true;
+    console.log('🔄 Model hot-swapped to user-trained model');
+}
+
+/**
+ * Reset to the default model from /model/model.json.
+ * Used after clearing personalization.
+ * 
+ * @returns {Promise<tf.LayersModel>}
+ */
+export async function resetToDefaultModel() {
+    if (cachedModel) {
+        cachedModel.dispose();
+        cachedModel = null;
+    }
+    isUserModel = false;
+    isLoading = false;
+    loadPromise = null;
+
+    // Force reload from default
+    cachedModel = await tf.loadLayersModel('/model/model.json');
+    console.log('🧠 Reset to default gesture model');
+
+    // Warm up
+    const dummy = tf.zeros([1, 63]);
+    const warmup = cachedModel.predict(dummy);
+    warmup.dispose();
+    dummy.dispose();
+
+    return cachedModel;
+}
+
+/**
+ * Check if the currently active model is user-trained.
+ * @returns {boolean}
+ */
+export function isUsingUserModel() {
+    return isUserModel;
 }
 
 /**

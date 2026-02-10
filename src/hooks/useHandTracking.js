@@ -12,7 +12,7 @@ import { loadGestureModel, predictGesture } from '../ml/gestureModel';
  * MediaPipe loads from CDN for Vite production build compatibility.
  * TF.js model loads from /model/model.json (static asset in public/).
  */
-function useHandTracking({ videoRef, canvasRef, onGestureDetected, onLoadingComplete }) {
+function useHandTracking({ videoRef, canvasRef, onGestureDetected, onLoadingComplete, landmarksRef }) {
     const [isInitialized, setIsInitialized] = useState(false);
     const [isHandDetected, setIsHandDetected] = useState(false);
 
@@ -113,6 +113,9 @@ function useHandTracking({ videoRef, canvasRef, onGestureDetected, onLoadingComp
                         setIsHandDetected(true);
                         drawLandmarks(ctx, landmarks, canvas.width, canvas.height);
 
+                        // Expose landmarks for Training Mode capture
+                        if (landmarksRef) landmarksRef.current = landmarks;
+
                         // ML classification (replaces rule-based classifier)
                         const { gestureType, phrase } = predictGesture(landmarks);
 
@@ -123,6 +126,7 @@ function useHandTracking({ videoRef, canvasRef, onGestureDetected, onLoadingComp
                         }
                     } else {
                         setIsHandDetected(false);
+                        if (landmarksRef) landmarksRef.current = null;
                         if (lastGestureRef.current !== 'none') {
                             lastGestureRef.current = 'none';
                             onGestureDetected?.({ phrase: 'Waiting for input…', gestureType: null });

@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.0] — 2026-02-10
+
+### 🎓 Training Mode — Browser-Side Gesture Personalization
+
+Major release: users can now train their own gesture model entirely in the browser.
+
+### Added
+- **Training Mode UI** — "Personalize Gestures" toggle in the header
+- **In-browser model training** using TensorFlow.js (Dense 128→64→5 architecture)
+- **IndexedDB model persistence** — user models saved to `indexeddb://corporate-gesture-model`
+- **Auto-loading** — user model loaded from IndexedDB on startup, falls back to default
+- **Hot-swap model** — trained model applies immediately without page reload
+- **3-second auto-capture** — records ~30 landmark frames per gesture with visual progress
+- **Sample count tracking** — per-gesture sample count badges with color coding
+- **Progress indicators** — epoch-by-epoch training progress bar
+- **Reset personalization** — clears dataset + model, reverts to default
+- `src/ml/localModelManager.js` — IndexedDB load/save/clear/check API
+- `src/ml/gestureTrainer.js` — dataset collection, normalization, training pipeline
+- `src/components/TrainingMode.jsx` — user-facing training UI panel
+
+### Changed
+- `src/ml/gestureModel.js` — IndexedDB-first model loading, model swap/reset API
+- `src/hooks/useHandTracking.js` — exposes live landmarks via ref for training capture
+- `src/components/VideoFeed.jsx` — passes `landmarksRef` to hand tracking hook
+- `src/App.jsx` — Training Mode toggle, landmarks ref, conditional panel rendering
+- `package.json` — bumped to v3.0.0
+
+---
+
 ## [2.0.0] — 2026-02-10
 
 ### 🧠 ML Gesture Classifier

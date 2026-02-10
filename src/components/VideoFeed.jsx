@@ -11,7 +11,7 @@ import useHandTracking from '../hooks/useHandTracking';
  * @param {Function} props.onGestureDetected - Callback when gesture is detected
  * @param {Function} props.onLoadingComplete - Callback when MediaPipe is ready
  */
-function VideoFeed({ onGestureDetected, onLoadingComplete }) {
+function VideoFeed({ onGestureDetected, onLoadingComplete, landmarksRef }) {
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
     const containerRef = useRef(null);
@@ -22,7 +22,8 @@ function VideoFeed({ onGestureDetected, onLoadingComplete }) {
         videoRef,
         canvasRef,
         onGestureDetected,
-        onLoadingComplete
+        onLoadingComplete,
+        landmarksRef
     });
 
     // Handle responsive sizing

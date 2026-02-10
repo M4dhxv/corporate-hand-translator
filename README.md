@@ -3,7 +3,7 @@
 > *Translate your hand gestures into peak corporate jargon — powered by AI, running entirely in your browser.*
 
 [![Live Demo](https://img.shields.io/badge/demo-live-brightgreen?style=flat-square)](https://corporate-hand-translator.vercel.app)
-[![Version](https://img.shields.io/badge/version-2.0.0-blue?style=flat-square)](#changelog)
+[![Version](https://img.shields.io/badge/version-3.0.0-blue?style=flat-square)](#changelog)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![TensorFlow.js](https://img.shields.io/badge/TensorFlow.js-v4.17-orange?style=flat-square&logo=tensorflow)](https://www.tensorflow.org/js)
 [![Vercel](https://img.shields.io/badge/deployed%20on-Vercel-black?style=flat-square&logo=vercel)](https://vercel.com)
@@ -23,6 +23,7 @@ Show your hand to the camera → AI detects the gesture → You get a corporate 
 | Feature | Description |
 |---------|-------------|
 | 🧠 **ML Gesture Recognition** | TensorFlow.js neural network classifies gestures in real-time |
+| 🎓 **Training Mode** | Personalize gesture recognition in-browser — no servers, no uploads |
 | 🎥 **Hand Tracking** | MediaPipe Hands detects 21 landmarks per hand at 30fps |
 | 🦴 **Skeleton Overlay** | Live hand skeleton visualization on the video feed |
 | 🔊 **Text-to-Speech** | Reads corporate phrases aloud (toggleable) |
@@ -55,6 +56,11 @@ TF.js Neural Network (63 → 128 → 64 → 5)
 Gesture Label + Confidence Score
     ↓
 Corporate Phrase → UI + TTS
+
+─── Training Mode ───
+Record Gestures → Collect Landmarks → Train in Browser
+    ↓
+Save to IndexedDB → Auto-load on next visit
 ```
 
 ### ML Model Details
@@ -117,9 +123,34 @@ npm run preview  # Preview the production build locally
 
 ---
 
-## 🧠 Model Training
+## 🎓 Personalize Gestures (Training Mode)
 
-The ML model is pre-trained and included in the repo (`public/model/`). To retrain:
+Users can train their own gesture model **entirely in the browser** — no servers, no uploads, no accounts.
+
+### How It Works
+
+1. Click **"Personalize Gestures"** in the header
+2. Hold each gesture steady in front of the camera
+3. Click the **Record** button for each gesture (auto-captures ~30 frames in 3 seconds)
+4. Collect at least **10 samples per gesture**
+5. Click **"Train My Gestures"** — training runs in-browser (~15 seconds)
+6. Done! Your personalized model is saved to **IndexedDB** and loads automatically on future visits
+
+### Technical Details
+
+| Property | Value |
+|----------|-------|
+| Storage | `indexeddb://corporate-gesture-model` |
+| Model size | < 500 KB |
+| Training epochs | 50 |
+| Privacy | All data stays in your browser |
+| Reset | Click "Reset Personalization" to revert to the default model |
+
+---
+
+## 🧠 Default Model Training
+
+The default ML model is pre-trained and included in the repo (`public/model/`). To retrain:
 
 ```bash
 # Generate synthetic data + train the neural network
@@ -140,24 +171,27 @@ This runs `scripts/trainModel.mjs`, which:
 ```
 corporate-hand-translator/
 ├── public/
-│   └── model/                  # Trained TF.js model (static assets)
-│       ├── model.json          # Model topology + weights manifest
-│       └── group1-shard1of1.bin  # Model weights
+│   └── model/                     # Default TF.js model (static assets)
+│       ├── model.json             # Model topology + weights manifest
+│       └── group1-shard1of1.bin   # Model weights
 ├── scripts/
-│   └── trainModel.mjs          # Offline model training script
+│   └── trainModel.mjs             # Offline model training script
 ├── src/
 │   ├── ml/
-│   │   └── gestureModel.js     # Model loader + inference engine
+│   │   ├── gestureModel.js        # Model loader + inference engine
+│   │   ├── localModelManager.js   # IndexedDB model persistence
+│   │   └── gestureTrainer.js      # In-browser training pipeline
 │   ├── hooks/
-│   │   └── useHandTracking.js  # MediaPipe + ML integration hook
+│   │   └── useHandTracking.js     # MediaPipe + ML integration hook
 │   ├── components/
-│   │   ├── VideoFeed.jsx       # Camera feed + canvas overlay
-│   │   └── PhraseOverlay.jsx   # Gesture phrase display
+│   │   ├── VideoFeed.jsx          # Camera feed + canvas overlay
+│   │   ├── PhraseOverlay.jsx      # Gesture phrase display
+│   │   └── TrainingMode.jsx       # Training Mode UI panel
 │   ├── utils/
-│   │   └── gestureClassifier.js  # Legacy rule-based classifier
-│   ├── App.jsx                 # Main application component
-│   ├── index.css               # Global styles + design system
-│   └── main.jsx                # Application entry point
+│   │   └── gestureClassifier.js   # Legacy rule-based classifier
+│   ├── App.jsx                    # Main application component
+│   ├── index.css                  # Global styles + design system
+│   └── main.jsx                   # Application entry point
 ├── package.json
 ├── vite.config.js
 ├── tailwind.config.js

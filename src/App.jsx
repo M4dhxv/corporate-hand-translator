@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import VideoFeed from './components/VideoFeed';
 import PhraseOverlay from './components/PhraseOverlay';
+import TrainingMode from './components/TrainingMode';
 
 /**
  * Main Application Component
@@ -9,6 +10,7 @@ import PhraseOverlay from './components/PhraseOverlay';
  * A satirical web app that translates hand gestures into corporate jargon.
  * Uses MediaPipe Hands for real-time hand tracking and gesture detection.
  * Features Text-to-Speech using Web Speech API.
+ * Features Training Mode for personalizing gesture recognition.
  */
 function App() {
     // Current detected phrase from gesture recognition
@@ -23,11 +25,17 @@ function App() {
     // TTS enabled state
     const [ttsEnabled, setTtsEnabled] = useState(true);
 
+    // Training Mode state
+    const [trainingMode, setTrainingMode] = useState(false);
+
     // Ref to track last spoken phrase to avoid repetition
     const lastSpokenRef = useRef('');
 
     // Ref to track current TTS state (avoids stale closure)
     const ttsEnabledRef = useRef(ttsEnabled);
+
+    // Shared landmarks ref — written by useHandTracking, read by TrainingMode
+    const landmarksRef = useRef(null);
 
     // Keep ref in sync with state
     useEffect(() => {
@@ -120,8 +128,9 @@ function App() {
                         Perfect for synergizing cross-functional deliverables.
                     </p>
 
-                    {/* TTS Toggle Button */}
-                    <div className="flex justify-center mt-4">
+                    {/* Control Buttons */}
+                    <div className="flex justify-center gap-3 mt-4">
+                        {/* TTS Toggle Button */}
                         <button
                             onClick={() => setTtsEnabled(!ttsEnabled)}
                             className={`
@@ -143,6 +152,23 @@ function App() {
                                 </svg>
                             )}
                             {ttsEnabled ? 'Voice On' : 'Voice Off'}
+                        </button>
+
+                        {/* Training Mode Toggle Button */}
+                        <button
+                            onClick={() => setTrainingMode(!trainingMode)}
+                            className={`
+                                flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
+                                transition-all duration-300
+                                ${trainingMode
+                                    ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30 hover:bg-purple-500/30'
+                                    : 'bg-navy-700/50 text-slate-corp-400 border border-navy-600/30 hover:bg-navy-600/50'}
+                            `}
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                            </svg>
+                            {trainingMode ? 'Training On' : 'Personalize Gestures'}
                         </button>
                     </div>
                 </div>
@@ -168,6 +194,7 @@ function App() {
                             <VideoFeed
                                 onGestureDetected={handleGestureDetected}
                                 onLoadingComplete={handleLoadingComplete}
+                                landmarksRef={landmarksRef}
                             />
 
                             {/* Phrase Overlay (positioned at bottom of video) */}
@@ -208,6 +235,14 @@ function App() {
                             <p className="mt-1 text-xs">Hand tracking powered by MediaPipe</p>
                         </div>
                     </div>
+
+                    {/* Training Mode Panel (below the main card) */}
+                    {trainingMode && (
+                        <TrainingMode
+                            landmarksRef={landmarksRef}
+                            onClose={() => setTrainingMode(false)}
+                        />
+                    )}
                 </div>
             </main>
 
