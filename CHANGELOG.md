@@ -7,6 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.3.0] — 2026-02-15
+
+### ✨ Added - Premium macOS/iOS-Inspired UI Redesign
+
+**Major visual overhaul**: Complete UI refresh inspired by macOS Ventura/Sonoma and iOS system design. All functional improvements from v3.2.0 are fully preserved.
+
+#### Design Philosophy
+- **Premium aesthetic**: Calm, polished, professional
+- **macOS/iOS inspired**: Native Apple design language (inspired, not copied)
+- **Dark/Light modes**: Full theme support with system preference detection
+- **Glassmorphism**: Subtle blur and translucency for depth
+- **Typography**: Inter font with generous whitespace and clear hierarchy
+- **Micro-interactions**: Smooth transitions, subtle animations, intentional states
+
+#### Visual Changes
+
+**Color System**
+- Light mode: Soft off-white background (#f5f5f7), white cards with subtle borders
+- Dark mode: Deep graphite background (#1d1d1f), frosted glass cards
+- New accent colors: macOS system blue (#0071e3), system green (#34c759)
+- Semantic grays: Primary, secondary, and tertiary text colors for hierarchy
+
+**Components**
+- ✅ Premium glass cards with backdrop blur and subtle shadows
+- ✅ Refined video feed container with larger rounded corners
+- ✅ macOS-style toggle switches for settings
+- ✅ Smooth gesture detection badges with active states
+- ✅ Status indicator dots with pulse animation for active gestures
+- ✅ Improved header with dark mode toggle
+- ✅ Settings panel with grouped controls
+- ✅ Better spacing and visual rhythm throughout
+
+**Theme Toggle**
+- ✅ Elegant sun/moon icon button in header
+- ✅ localStorage persistence of user preference
+- ✅ Respects system preference on first visit
+- ✅ Smooth color transitions (300ms)
+- ✅ Full dark mode support for all components
+
+**Interactions**
+- ✅ Smooth hover states on all interactive elements
+- ✅ Scale animation on active gesture badges (105% scale)
+- ✅ Pulse animation on active status indicator
+- ✅ Fade-in animation for training mode panel
+- ✅ Disabled button states that feel intentional
+
+#### Modified Files
+- `src/App.jsx` — Complete redesign, all logic preserved
+- `tailwind.config.js` — macOS color palette, new animations
+- `src/index.css` — Premium glass effects, component utilities
+
+#### Notes
+- No functional changes to gesture detection, ML, TTS, or training
+- All v3.2.0 fixes (Gesture Decision Engine, TTS reliability) intact
+- Performance optimized (glass blur effects performant across browsers)
+- Fully accessible (proper semantic HTML, ARIA labels)
+
+---
+
 ## [3.2.0] — 2026-02-15
 
 ### ✨ Added - Gesture Decision Engine

@@ -4,10 +4,24 @@ export default {
         "./index.html",
         "./src/**/*.{js,ts,jsx,tsx}",
     ],
+    darkMode: 'class',
     theme: {
         extend: {
             colors: {
-                // Corporate color palette
+                // macOS-inspired neutral palette
+                'mac': {
+                    'bg-light': '#f5f5f7',
+                    'bg-light-secondary': '#ffffff',
+                    'bg-dark': '#1d1d1f',
+                    'bg-dark-secondary': '#424245',
+                    'text-primary-light': '#1d1d1f',
+                    'text-secondary-light': '#86868b',
+                    'text-primary-dark': '#f5f5f7',
+                    'text-secondary-dark': '#a1a1a6',
+                    'accent': '#0071e3',
+                    'accent-green': '#34c759',
+                },
+                // Legacy corporate palette (still used for accents)
                 'navy': {
                     50: '#e7e9ef',
                     100: '#c3c8d7',
@@ -20,30 +34,32 @@ export default {
                     800: '#1c2759',
                     900: '#0f1545',
                 },
-                'slate-corp': {
-                    50: '#f8fafc',
-                    100: '#f1f5f9',
-                    200: '#e2e8f0',
-                    300: '#cbd5e1',
-                    400: '#94a3b8',
-                    500: '#64748b',
-                    600: '#475569',
-                    700: '#334155',
-                    800: '#1e293b',
-                    900: '#0f172a',
-                }
             },
             fontFamily: {
-                sans: ['Inter', 'Roboto', 'system-ui', 'sans-serif'],
+                sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
             },
             animation: {
-                'fade-in': 'fadeIn 0.5s ease-in-out',
-                'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                'fade-in': 'fadeIn 0.3s ease-out',
+                'slide-up': 'slideUp 0.4s ease-out',
+                'pulse-subtle': 'pulseSubtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                'scale-in': 'scaleIn 0.2s ease-out',
             },
             keyframes: {
                 fadeIn: {
-                    '0%': { opacity: '0', transform: 'translateY(10px)' },
+                    '0%': { opacity: '0' },
+                    '100%': { opacity: '1' },
+                },
+                slideUp: {
+                    '0%': { opacity: '0', transform: 'translateY(8px)' },
                     '100%': { opacity: '1', transform: 'translateY(0)' },
+                },
+                pulseSubtle: {
+                    '0%, 100%': { opacity: '1' },
+                    '50%': { opacity: '0.7' },
+                },
+                scaleIn: {
+                    '0%': { opacity: '0', transform: 'scale(0.95)' },
+                    '100%': { opacity: '1', transform: 'scale(1)' },
                 }
             },
             backdropBlur: {

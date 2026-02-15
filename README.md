@@ -3,7 +3,7 @@
 > *Translate your hand gestures into peak corporate jargon — powered by AI, running entirely in your browser.*
 
 [![Live Demo](https://img.shields.io/badge/demo-live-brightgreen?style=flat-square)](https://corporate-hand-translator.vercel.app)
-[![Version](https://img.shields.io/badge/version-3.2.0-blue?style=flat-square)](#changelog)
+[![Version](https://img.shields.io/badge/version-3.3.0-blue?style=flat-square)](#changelog)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![TensorFlow.js](https://img.shields.io/badge/TensorFlow.js-v4.17-orange?style=flat-square&logo=tensorflow)](https://www.tensorflow.org/js)
 [![Vercel](https://img.shields.io/badge/deployed%20on-Vercel-black?style=flat-square&logo=vercel)](https://vercel.com)
@@ -118,6 +118,37 @@ console.log(getEngineState());
 //   cooldownTimeRemaining: 1500
 // }
 ```
+
+---
+
+## 🎨 Design Philosophy
+
+**Corporate Signal Translator** embraces a **premium, macOS-inspired aesthetic** that prioritizes clarity and calm over complexity.
+
+### Visual Identity
+- **Light Mode**: Soft off-white backgrounds (#f5f5f7) with white cards and subtle borders, evoking a professional, polished feel
+- **Dark Mode**: Deep graphite backgrounds (#1d1d1f) with frosted glass containers and translucent layers, for reduced eye strain
+- **Color Palette**: Semantic colors inspired by Apple's design system
+  - **Accent Blue** (#0071e3) for primary actions and focus states
+  - **Accent Green** (#34c759) for success and positive feedback
+  - **Neutral Grays** for text and secondary elements
+- **Typography**: Inter typeface with generous line-height and whitespace, emphasizing readability and breathing room
+- **Micro-interactions**: Smooth transitions (fade-in, slide-up, scale), pulse animations for status indicators, and responsive hover states
+
+### Glassmorphism Approach
+Glass morphism effects are applied subtly:
+- Backdrop blur (10-15px) for depth and layering
+- Semi-transparent backgrounds (90-95% opacity) for sophistication
+- Soft borders with low alpha values for definition without harshness
+
+### Dark/Light Mode
+Full theme support with system preference detection:
+- Toggle in the header (sun/moon icon)
+- Automatic persistence via `localStorage` — your preference is remembered
+- All components are theme-aware, no jarring color shifts
+
+### Why This Matters
+Hand gesture interfaces can feel gimmicky. By pairing the cutting-edge ML with a calm, professional design language, we create an app that feels like a **native Apple utility** — trustworthy and elegant.
 
 ---
 
