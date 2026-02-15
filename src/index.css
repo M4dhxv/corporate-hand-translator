@@ -5,10 +5,9 @@
 
 /* 
  * Corporate Signal Translator - Global Styles
- * Theme: Premium macOS/iOS-inspired design system
+ * Premium macOS-inspired design with proper contrast
  */
 
-/* Base layer customizations */
 @layer base {
   html {
     @apply scroll-smooth;
@@ -16,215 +15,153 @@
   
   /* Light mode (default) */
   body {
-    @apply bg-mac-bg-light text-mac-text-primary-light;
+    @apply bg-white text-neutral-950;
     @apply font-sans antialiased transition-colors duration-300;
   }
 
   /* Dark mode */
-  body.dark {
-    @apply bg-mac-bg-dark text-mac-text-primary-dark;
+  :is(.dark body) {
+    @apply bg-neutral-950 text-neutral-50;
   }
 
-  /* Custom scrollbar styling */
+  /* Scrollbar styling */
   ::-webkit-scrollbar {
     @apply w-2;
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-mac-bg-light dark:bg-mac-bg-dark;
+    @apply bg-white dark:bg-neutral-950;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-mac-text-secondary-light/30 dark:bg-mac-text-secondary-dark/30 rounded-full;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-mac-text-secondary-light/50 dark:bg-mac-text-secondary-dark/50;
+    @apply bg-neutral-300 dark:bg-neutral-700 rounded-full hover:bg-neutral-400 dark:hover:bg-neutral-600;
   }
 }
 
-/* Component layer - reusable UI patterns */
 @layer components {
-  /* Premium glass card - light mode */
-  .glass-card {
-    @apply bg-white/80 dark:bg-mac-bg-dark-secondary/50 backdrop-blur-xl;
-    @apply border border-black/5 dark:border-white/10;
-    @apply rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)];
-    @apply transition-all duration-300;
+  /* Premium subtle border card */
+  .card-subtle {
+    @apply rounded-2xl border border-neutral-200/50 dark:border-neutral-800/50;
+    @apply bg-white dark:bg-neutral-900;
+    @apply shadow-sm hover:shadow-md transition-shadow duration-300;
   }
 
-  /* Premium glass bubble for overlay text */
-  .glass-bubble {
-    @apply bg-black/75 dark:bg-white/10 backdrop-blur-lg;
-    @apply border border-white/20 dark:border-white/20;
-    @apply rounded-xl px-4 py-2 shadow-lg;
-    @apply text-white dark:text-white text-sm font-medium;
+  /* Premium glass effect for overlays */
+  .glass-overlay {
+    @apply backdrop-blur-xl;
+    @apply bg-black/75 dark:bg-white/10;
+    @apply border border-white/20;
+    @apply rounded-xl px-4 py-2 text-white;
   }
 
-  /* Video container with premium shadow */
-  .video-container {
-    @apply relative overflow-hidden rounded-2xl;
-    @apply shadow-[0_4px_16px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.4)];
-    @apply border border-black/5 dark:border-white/10;
-    @apply transition-shadow duration-300;
+  /* Floating phrase bubble - high contrast */
+  .phrase-bubble {
+    @apply glass-overlay text-sm font-medium shadow-lg;
+    @apply animate-fade-in;
   }
 
-  /* Premium toggle switch */
-  .toggle-switch {
-    @apply relative inline-flex items-center h-6 w-11 rounded-full;
-    @apply bg-gray-300 dark:bg-gray-600 transition-colors duration-300;
-    @apply cursor-pointer;
-  }
-
-  .toggle-switch.active {
-    @apply bg-mac-accent-green;
-  }
-
-  .toggle-switch-thumb {
-    @apply absolute w-5 h-5 bg-white rounded-full shadow-md;
-    @apply transition-transform duration-300 left-0.5;
-  }
-
-  .toggle-switch.active .toggle-switch-thumb {
-    @apply translate-x-5;
-  }
-
-  /* Status indicator dot */
-  .status-dot {
-    @apply w-2 h-2 rounded-full;
-  }
-
-  .status-dot.active {
-    @apply bg-mac-accent-green;
-  }
-
-  .status-dot.inactive {
-    @apply bg-mac-text-secondary-light dark:bg-mac-text-secondary-dark;
-  }
-
-  .status-dot.pulse {
-    @apply animate-pulse-subtle;
-  }
-}
-
-/* Utility layer - one-off helpers */
-@layer utilities {
-  /* Premium button styles */
-  .btn-mac {
-    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200;
-    @apply text-sm text-white bg-mac-accent;
+  /* Premium action button */
+  .btn-premium {
+    @apply px-4 py-2.5 rounded-xl font-medium;
+    @apply bg-blue-500 text-white;
     @apply hover:bg-blue-600 active:scale-95;
+    @apply transition-all duration-200;
     @apply disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
-  .btn-mac-secondary {
-    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200;
-    @apply text-sm bg-mac-bg-light-secondary dark:bg-mac-bg-dark-secondary;
-    @apply text-mac-text-primary-light dark:text-mac-text-primary-dark;
-    @apply border border-black/10 dark:border-white/10;
-    @apply hover:bg-gray-100 dark:hover:bg-mac-bg-dark-secondary/80;
-    @apply active:scale-95;
-  }
-
-  /* Subtle text */
-  .text-secondary {
-    @apply text-mac-text-secondary-light dark:text-mac-text-secondary-dark;
-  }
-
-  /* Accent text */
-  .text-accent {
-    @apply text-mac-accent;
-  }
-
-  /* Premium heading styles */
-  .heading-lg {
-    @apply text-3xl font-semibold tracking-tight;
-  }
-
-  .heading-md {
-    @apply text-xl font-semibold tracking-tight;
-  }
-
-  .heading-sm {
-    @apply text-base font-semibold tracking-tight;
-  }
-
-  /* Gesture label badge */
-  .gesture-badge {
-    @apply inline-flex items-center gap-2 px-3 py-1.5;
-    @apply bg-mac-bg-light-secondary dark:bg-mac-bg-dark-secondary;
-    @apply text-mac-text-primary-light dark:text-mac-text-primary-dark;
-    @apply rounded-full text-sm font-medium;
-    @apply border border-black/5 dark:border-white/10;
-  }
-
-  /* Confidence bar */
-  .confidence-bar {
-    @apply h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden;
-  }
-
-  .confidence-bar-fill {
-    @apply h-full bg-mac-accent-green transition-all duration-300;
-  }
-
-  /* Hand status indicator */
-  .hand-status {
-    @apply flex items-center gap-2 text-sm text-secondary;
-    @apply transition-all duration-300;
-  }
-
-  .hand-status.detected {
-    @apply text-mac-accent-green;
-  }
-}
-  .animate-delay-100 {
-    animation-delay: 100ms;
-  }
-
-  .animate-delay-200 {
-    animation-delay: 200ms;
-  }
-
-  .animate-delay-300 {
-    animation-delay: 300ms;
-  }
-
-  /* Prevent layout shift during video load */
-  .aspect-video-camera {
-    aspect-ratio: 640 / 480;
+  .btn-secondary {
+    @apply px-4 py-2.5 rounded-xl font-medium;
+    @apply bg-neutral-100 dark:bg-neutral-800 text-neutral-950 dark:text-white;
+    @apply border border-neutral-200 dark:border-neutral-700;
+    @apply hover:bg-neutral-200 dark:hover:bg-neutral-700;
+    @apply transition-all duration-200;
   }
 }
 
-/* Custom animations */
-@keyframes floatUp {
-  0%, 100% {
+@layer utilities {
+  /* Status pulse animation */
+  .pulse-status {
+    @apply animate-pulse opacity-75;
+  }
+
+  /* Smooth fade-in for dynamic content */
+  .fade-in {
+    @apply animate-fade-in;
+  }
+
+  /* Scale-in animation for training mode */
+  .scale-in {
+    @apply animate-scale-in;
+  }
+
+  /* Neutral text colors with proper contrast */
+  .text-neutral-dim {
+    @apply text-neutral-600 dark:text-neutral-400;
+  }
+
+  .text-neutral-subdued {
+    @apply text-neutral-500 dark:text-neutral-500;
+  }
+
+  /* High contrast primary text */
+  .text-primary {
+    @apply text-neutral-950 dark:text-white font-medium;
+  }
+
+  /* Border utilities */
+  .border-subtle {
+    @apply border-neutral-200/50 dark:border-neutral-800/50;
+  }
+
+  /* Layout utilities */
+  .container-max {
+    @apply max-w-4xl mx-auto;
+  }
+}
+
+/* Custom keyframes for smooth animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
     transform: translateY(0);
   }
-  50% {
-    transform: translateY(-10px);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
   }
-  100% {
-    background-position: 200% 0;
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
-.animate-float {
-  animation: floatUp 3s ease-in-out infinite;
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
 }
 
-.animate-shimmer {
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.1) 50%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 2s infinite;
+.animate-slide-up {
+  animation: slideUp 0.4s ease-out;
 }
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out;
+}
+

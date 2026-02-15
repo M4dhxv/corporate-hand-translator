@@ -7,7 +7,90 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [3.3.0] — 2026-02-15
+## [4.3.0] — 2026-02-15
+
+### 🔘 Button Toggle Restored for Voice Control
+
+Rolled back from pinch gesture to traditional button toggle for voice control. Pinch gesture proved unreliable in production despite strict refinement (v4.2.0).
+
+#### Changes
+- ✅ Removed pinch gesture detection (`src/hooks/usePinchDetector.js` no longer imported)
+- ✅ Added voice toggle button to Settings panel
+- ✅ Button shows ON/OFF status with color indicators (green for ON, gray for OFF)
+- ✅ Cleaner status bar (removed "pinch to toggle" instruction)
+- ✅ Simplified voice control UX
+
+#### Files Modified
+- `src/App.jsx` – Removed usePinchDetector import, removed pinch initialization, removed pinch detection from gesture handler, added voice toggle button to settings
+- `package.json` – Version bumped to 4.3.0
+
+#### Lesson Learned
+While pinch gesture detection worked technically (v4.1.0 → v4.2.0), real-world hand movement variation caused false positives even with strict multi-condition validation. Simple button toggle provides more reliable user experience with fewer unintended activations.
+
+#### Voice Control Behavior
+- Voice toggle button in Settings panel shows current state
+- User can click button to enable/disable TTS for gesture announcements
+- State persists during session
+- Independent from gesture recognition system
+
+---
+
+## [4.2.0] — 2026-02-15
+
+### 🎯 Pinch Gesture Detection Refinement
+
+**Strict pinch detection to eliminate false positives**. Pinch gesture now requires ALL conditions to be met before triggering voice toggle.
+
+```#### Enhanced Detection Logic
+
+**Strict Criteria (All Must Be True):**
+1. **Thumb + Index Pinch**: Distance < 40px (very tight threshold)
+2. **Fingers CLOSED**: Middle, Ring, and Pinky tips must be closer to wrist than their joints
+   - If any of these three fingers are extended → pinch is invalid
+3. **Index NOT Fully Extended**: Prevents conflict with POINTING_UP gesture
+4. **Gesture Dominance**: Pinch suppressed if PEACE, POINTING_UP, or OPEN_PALM active
+5. **Hold Time**: 700-900ms continuous (immediately resets if any condition breaks)
+6. **Cooldown**: 2-second lock after successful toggle (prevents spam)
+
+#### Technical Details
+- Distance calculation: Euclidean distance between landmarks 4 (thumb tip) and 8 (index tip)
+- Finger extension: Tip distance from wrist > 1.15 × PIP distance from wrist
+- Index extension check: Tip distance > 150px from wrist AND tip Y < PIP Y - 30px
+- Conflicting gestures: PEACE_SIGN, POINTING_UP, OPEN_PALM suppress pinch detection
+
+#### User Impact
+- ✅ Fewer accidental toggles from casual hand movements
+- ✅ Clear intentional gesture required (pinch + hold other fingers closed)
+- ✅ No interference with other gestures
+- ✅ Consistent, predictable behavior
+
+#### Files Modified
+- `src/hooks/usePinchDetector.js` – Complete rewrite with strict logic
+- `src/App.jsx` – Pass currentGestureType to pinch detector
+
+---
+
+## [4.1.0] — 2026-02-15
+
+### 🫶 Pinch Gesture Voice Toggle
+
+Added pinch gesture (thumb + index fingers touching) to toggle voice on/off without UI buttons.
+
+**Features:**
+- Pinch detection with 700ms hold time (prevents accidental triggers)
+- 2-second cooldown (prevents rapid re-toggling)
+- Minimal UI feedback: "🔊 Voice on · Pinch to mute" / "🔇 Voice off · Pinch to enable"
+- Works in both light and dark modes
+
+**Files Added:**
+- `src/hooks/usePinchDetector.js` – Pinch gesture detection
+
+**Files Modified:**
+- `src/App.jsx` – Voice state management, pinch integration
+
+---
+
+## [4.0.0] — 2026-02-15
 
 ### ✨ Added - Premium macOS/iOS-Inspired UI Redesign
 
@@ -28,6 +111,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dark mode: Deep graphite background (#1d1d1f), frosted glass cards
 - New accent colors: macOS system blue (#0071e3), system green (#34c759)
 - Semantic grays: Primary, secondary, and tertiary text colors for hierarchy
+
 
 **Components**
 - ✅ Premium glass cards with backdrop blur and subtle shadows
