@@ -5,8 +5,8 @@ import TrainingMode from './components/TrainingMode';
 
 /**
  * Corporate Signal Translator - Main App
- * Premium macOS-inspired utility design
- * UI-only redesign: All logic from v3.2.0 preserved
+ * macOS utility-style interface with fixed video card
+ * Zero scrolling, always-visible controls
  */
 function App() {
     // State management
@@ -133,72 +133,55 @@ function App() {
         setIsLoading(false);
     };
 
-    const gestures = [
-        { gesture: '✋', label: 'Open Palm', key: 'open-palm' },
-        { gesture: '✊', label: 'Fist', key: 'fist' },
-        { gesture: '👍', label: 'Thumbs Up', key: 'thumbs-up' },
-        { gesture: '☝️', label: 'Pointing', key: 'pointing' },
-        { gesture: '✌️', label: 'Peace', key: 'peace' },
-    ];
-
     return (
-        <div className={`min-h-screen ${darkMode ? 'dark' : ''}`}>
-            {/* Root background */}
-            <div className="min-h-screen bg-white dark:bg-neutral-950 transition-colors duration-300">
+        <div className={`${darkMode ? 'dark' : ''}`}>
+            {/* Root container - fixed viewport utility layout */}
+            <div className="h-screen w-screen bg-white dark:bg-neutral-950 transition-colors duration-300 flex flex-col overflow-hidden">
                 
-                {/* Header */}
-                <header className="sticky top-0 z-40 border-b border-neutral-200/50 dark:border-neutral-800/50 backdrop-blur-xl bg-white/90 dark:bg-neutral-950/90">
-                    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                        <div className="flex items-center justify-between gap-4">
-                            {/* Branding */}
-                            <div className="flex-1 min-w-0">
-                                <h1 className="text-lg font-semibold text-neutral-950 dark:text-white leading-tight">
-                                    Corporate Signal Translator
-                                </h1>
-                                <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">
-                                    Translate gestures into professional language
-                                </p>
-                            </div>
-
-                            {/* Dark mode toggle */}
-                            <button
-                                onClick={() => setDarkMode(!darkMode)}
-                                className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors duration-200 flex-shrink-0"
-                                aria-label="Toggle dark mode"
-                            >
-                                {darkMode ? (
-                                    <svg className="w-5 h-5 text-neutral-400" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-                                    </svg>
-                                ) : (
-                                    <svg className="w-5 h-5 text-neutral-600" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zm5.657-9.193a1 1 0 00-1.414 0l-.707.707A1 1 0 005.05 6.464l.707-.707a1 1 0 011.414 0zM3 11a1 1 0 100-2H2a1 1 0 100 2h1z" clipRule="evenodd" />
-                                    </svg>
-                                )}
-                            </button>
-                        </div>
+                {/* Minimalist header */}
+                <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-neutral-200/50 dark:border-neutral-800/50 flex-shrink-0">
+                    <div className="min-w-0">
+                        <h1 className="text-sm font-semibold text-neutral-950 dark:text-white">
+                            Corporate Signal Translator
+                        </h1>
                     </div>
+                    <button
+                        onClick={() => setDarkMode(!darkMode)}
+                        className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors duration-200 flex-shrink-0"
+                        aria-label="Toggle dark mode"
+                    >
+                        {darkMode ? (
+                            <svg className="w-4 h-4 text-neutral-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                            </svg>
+                        ) : (
+                            <svg className="w-4 h-4 text-neutral-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zm5.657-9.193a1 1 0 00-1.414 0l-.707.707A1 1 0 005.05 6.464l.707-.707a1 1 0 011.414 0zM3 11a1 1 0 100-2H2a1 1 0 100 2h1z" clipRule="evenodd" />
+                            </svg>
+                        )}
+                    </button>
                 </header>
 
-                {/* Main content */}
-                <main className="flex-1 px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-                    <div className="max-w-4xl mx-auto space-y-6">
+                {/* Main content area - centered video card with controls */}
+                <main className="flex-1 flex items-center justify-center px-4 sm:px-6 overflow-hidden relative">
+                    
+                    {/* Fixed video card - the product */}
+                    <div className="relative w-full max-w-3xl">
                         
-                        {/* Primary gesture card */}
-                        <div className="rounded-2xl overflow-hidden shadow-sm border border-neutral-200/50 dark:border-neutral-800/50 bg-white dark:bg-neutral-900">
-                            {/* Loading overlay */}
+                        {/* Video container with rounded corners */}
+                        <div className="rounded-3xl overflow-hidden shadow-2xl border border-neutral-200/50 dark:border-neutral-800/50 bg-black">
+                            
+                            {/* Loading state */}
                             {isLoading && (
-                                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 dark:bg-black/40 backdrop-blur-sm">
+                                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
                                     <div className="text-center">
-                                        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-                                        <p className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
-                                            Initializing…
-                                        </p>
+                                        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                                        <p className="text-xs font-medium text-white">Initializing…</p>
                                     </div>
                                 </div>
                             )}
 
-                            {/* Video feed */}
+                            {/* Aspect video feed */}
                             <div className="relative bg-black aspect-video flex items-center justify-center">
                                 <VideoFeed
                                     onGestureDetected={handleGestureDetected}
@@ -211,19 +194,15 @@ function App() {
                                 />
                             </div>
 
-                            {/* Status bar - below video */}
-                            <div className="px-6 py-4 border-t border-neutral-200/50 dark:border-neutral-800/50">
-                                <div className="flex items-center justify-between gap-4">
-                                    {/* Gesture status */}
-                                    <div className="flex items-center gap-3 flex-1">
-                                        <div className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                                            gestureType 
-                                                ? 'bg-green-500 animate-pulse' 
-                                                : 'bg-neutral-400 dark:bg-neutral-600'
+                            {/* Integrated status bar */}
+                            <div className="px-4 py-3 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-sm border-t border-neutral-200/50 dark:border-neutral-800/50">
+                                <div className="flex items-center justify-between gap-3 text-xs">
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                        <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 transition-all ${
+                                            gestureType ? 'bg-green-500 animate-pulse' : 'bg-neutral-300 dark:bg-neutral-600'
                                         }`} />
-                                        <div>
-                                            <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">Gesture</p>
-                                            <p className="text-sm font-semibold text-neutral-950 dark:text-white mt-0.5">
+                                        <div className="min-w-0">
+                                            <p className="text-neutral-500 dark:text-neutral-400 leading-tight">
                                                 {gestureType 
                                                     ? gestureType.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
                                                     : 'Waiting…'
@@ -231,130 +210,82 @@ function App() {
                                             </p>
                                         </div>
                                     </div>
-
                                     {gestureType && (
-                                        <div className="text-right">
-                                            <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Confidence</p>
-                                            <p className="text-sm font-semibold text-neutral-950 dark:text-white mt-0.5">
-                                                {Math.round(gestureConfidence * 100)}%
-                                            </p>
+                                        <div className="text-neutral-600 dark:text-neutral-400 flex-shrink-0">
+                                            {Math.round(gestureConfidence * 100)}%
                                         </div>
                                     )}
                                 </div>
                             </div>
                         </div>
 
-                        {/* Gesture reference grid */}
-                        <div>
-                            <h2 className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wide px-1 mb-3">
-                                Recognized Gestures
-                            </h2>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-                                {gestures.map((item) => (
-                                    <div
-                                        key={item.key}
-                                        className={`
-                                            p-3 rounded-xl text-center transition-all duration-200
-                                            border cursor-default select-none
-                                            ${gestureType === item.key
-                                                ? 'bg-blue-500/10 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500 ring-1 ring-blue-400/50 dark:ring-blue-500/50'
-                                                : 'bg-neutral-50 dark:bg-neutral-800/50 border-neutral-200 dark:border-neutral-700/50 hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                                            }
-                                        `}
-                                    >
-                                        <div className="text-2xl mb-1.5">{item.gesture}</div>
-                                        <p className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
-                                            {item.label}
-                                        </p>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Settings card */}
-                        <div className="rounded-2xl border border-neutral-200/50 dark:border-neutral-800/50 bg-white dark:bg-neutral-900 p-6">
-                            <h2 className="text-sm font-semibold text-neutral-950 dark:text-white mb-4">
-                                Settings
-                            </h2>
-
-                            {/* Training mode button */}
+                        {/* Floating control cluster - bottom-right of video card */}
+                        <div className="absolute -bottom-20 -right-20 w-40 space-y-2">
+                            
+                            {/* Voice state indicator */}
                             <button
-                                onClick={() => setTrainingMode(!trainingMode)}
-                                className={`
-                                    w-full px-4 py-3 rounded-xl text-left transition-all duration-200
-                                    flex items-center justify-between
-                                    border border-neutral-200 dark:border-neutral-700/50
-                                    ${trainingMode
-                                        ? 'bg-blue-500/10 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500'
-                                        : 'bg-neutral-50 dark:bg-neutral-800/50 hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                                    }
-                                `}
+                                onClick={() => setVoiceEnabled(!voiceEnabled)}
+                                className="w-full px-3 py-2.5 rounded-xl text-xs font-medium transition-all
+                                    bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800
+                                    hover:bg-neutral-50 dark:hover:bg-neutral-800/50
+                                    shadow-lg dark:shadow-2xl backdrop-blur-sm"
                             >
-                                <div>
-                                    <p className="font-medium text-neutral-950 dark:text-white text-sm">
-                                        Personalize Gestures
-                                    </p>
-                                    <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
-                                        Train custom hand gestures
-                                    </p>
+                                <div className="flex items-center justify-between gap-2">
+                                    <span>{voiceEnabled ? '🔊' : '🔇'}</span>
+                                    <span className="text-neutral-700 dark:text-neutral-300">
+                                        {voiceEnabled ? 'Voice On' : 'Voice Off'}
+                                    </span>
                                 </div>
-                                <svg 
-                                    className={`w-4 h-4 text-neutral-600 dark:text-neutral-400 transition-transform duration-200 flex-shrink-0 ml-3 ${trainingMode ? 'rotate-180' : ''}`}
-                                    fill="none" 
-                                    stroke="currentColor" 
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                                </svg>
                             </button>
 
-                            {/* Voice toggle button */}
-                            <div className="border-t border-neutral-200 dark:border-neutral-800/50 mt-4 pt-4">
-                                <button
-                                    onClick={() => setVoiceEnabled(!voiceEnabled)}
-                                    className="w-full px-4 py-3 rounded-xl transition-all duration-200
-                                        flex items-center justify-between
-                                        bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700
-                                        hover:bg-neutral-100 dark:hover:bg-neutral-800 active:scale-95"
-                                >
-                                    <div className="text-left">
-                                        <p className="font-medium text-neutral-950 dark:text-white text-sm">
-                                            {voiceEnabled ? '🔊 Voice Enabled' : '🔇 Voice Disabled'}
-                                        </p>
-                                        <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
-                                            Gesture announcements
-                                        </p>
-                                    </div>
-                                    <div className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors flex-shrink-0 ${
-                                        voiceEnabled 
-                                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' 
-                                            : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'
-                                    }`}>
-                                        {voiceEnabled ? 'ON' : 'OFF'}
-                                    </div>
-                                </button>
-                            </div>
-                        </div>
+                            {/* Personalize gestures */}
+                            <button
+                                onClick={() => setTrainingMode(true)}
+                                className="w-full px-3 py-2.5 rounded-xl text-xs font-medium transition-all
+                                    bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800
+                                    hover:bg-neutral-50 dark:hover:bg-neutral-800/50
+                                    shadow-lg dark:shadow-2xl backdrop-blur-sm
+                                    text-neutral-700 dark:text-neutral-300"
+                            >
+                                ✏️ Personalize
+                            </button>
 
-                        {/* Training mode panel */}
-                        {trainingMode && (
-                            <div className="animate-scale-in">
-                                <TrainingMode
-                                    landmarksRef={landmarksRef}
-                                    onClose={() => setTrainingMode(false)}
-                                />
-                            </div>
-                        )}
+                            {/* Reset / Recalibrate */}
+                            <button
+                                onClick={() => {
+                                    if (confirm('Reset hand tracking to default settings?')) {
+                                        window.location.reload();
+                                    }
+                                }}
+                                className="w-full px-3 py-2.5 rounded-xl text-xs font-medium transition-all
+                                    bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800
+                                    hover:bg-neutral-50 dark:hover:bg-neutral-800/50
+                                    shadow-lg dark:shadow-2xl backdrop-blur-sm
+                                    text-neutral-700 dark:text-neutral-300"
+                            >
+                                ⟲ Reset
+                            </button>
+                        </div>
                     </div>
                 </main>
 
-                {/* Footer */}
-                <footer className="border-t border-neutral-200/50 dark:border-neutral-800/50 bg-neutral-50/50 dark:bg-neutral-900/50 py-4">
-                    <p className="text-xs text-neutral-600 dark:text-neutral-400 text-center max-w-4xl mx-auto">
-                        Hand tracking by MediaPipe Hands • Gesture recognition with TensorFlow.js
-                    </p>
+                {/* Footer - minimal */}
+                <footer className="px-4 sm:px-6 py-2 text-center text-xs text-neutral-500 dark:text-neutral-500 border-t border-neutral-200/50 dark:border-neutral-800/50 flex-shrink-0">
+                    MediaPipe Hands • TensorFlow.js
                 </footer>
             </div>
+
+            {/* Training mode modal overlay */}
+            {trainingMode && (
+                <div className="fixed inset-0 z-50 bg-black/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="relative w-full max-w-2xl max-h-[90vh] rounded-3xl overflow-hidden bg-white dark:bg-neutral-900 shadow-2xl border border-neutral-200/50 dark:border-neutral-800/50">
+                        <TrainingMode
+                            landmarksRef={landmarksRef}
+                            onClose={() => setTrainingMode(false)}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [5.0.0] — 2026-02-16
+
+### 🎬 Major UI Redesign: macOS Utility Layout
+
+Completely redesigned the interface to behave like a native macOS utility app with **zero scrolling** during normal use.
+
+#### Layout Overhaul
+- ✅ Fixed viewport (h-screen w-screen) – no more scrolling
+- ✅ Centered video card as the primary product
+- ✅ Large rounded corners with shadow/glass effect
+- ✅ Minimalist sticky header (title + dark mode toggle)
+- ✅ Floating control cluster positioned at bottom-right of video
+- ✅ Training mode appears as modal overlay, not inline
+- ✅ Minimal footer with attribution
+
+#### Control Cluster (Always Visible)
+New floating panel with essential commands:
+- 🔊 Voice State Indicator (toggle on/off)
+- ✏️ Personalize Gestures (opens training modal)
+- ⟲ Reset / Recalibrate (reset settings)
+- 🌗 Dark Mode Toggle (in header)
+
+#### Training Mode as Modal
+- Appears as centered overlay with backdrop
+- Scrollable interior for gesture recording
+- Sticky header with close button (X)
+- No layout shift when opening/closing
+- Modal doesn't require viewport scrolling
+
+#### Design Language
+- Calm, premium, restrained aesthetic
+- macOS/iOS utility feel (not marketing)
+- Proper contrast in both light/dark modes
+- Subtle hover states, no flashy animations
+- Inter font with clear hierarchy
+
+#### Files Modified
+- `src/App.jsx` – Completely refactored layout, removed scrollable page layout
+- `src/components/TrainingMode.jsx` – Converted to scrollable modal-compatible format
+
+#### Zero Scrolling Promise
+- All key controls visible on screen at all times
+- Video feed stays centered and fixed
+- Training opens as overlay, doesn't push anything down
+- Perfect for live meetings without distraction
+
+---
+
 ## [4.3.0] — 2026-02-15
 
 ### 🔘 Button Toggle Restored for Voice Control
