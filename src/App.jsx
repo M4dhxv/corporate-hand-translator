@@ -51,9 +51,21 @@ function App() {
             window.speechSynthesis.cancel();
         } else {
             // Prime the TTS engine with a silent utterance (fixes user gesture requirements on some browsers)
-            const silentUtterance = new SpeechSynthesisUtterance('');
-            silentUtterance.volume = 0;
-            window.speechSynthesis.speak(silentUtterance);
+            try {
+                const silentUtterance = new SpeechSynthesisUtterance('');
+                silentUtterance.volume = 0;
+                // Safely attempt to speak, as some browsers may require user interaction first
+                const speakPromise = window.speechSynthesis.speak(silentUtterance);
+                // Handle promise-based errors (modern browsers)
+                if (speakPromise && speakPromise.catch) {
+                    speakPromise.catch(() => {
+                        // Silently fail if user hasn't interacted with the page yet
+                    });
+                }
+            } catch (err) {
+                // Silently fail if speech synthesis is not available
+                console.debug('TTS priming failed:', err.message);
+            }
         }
     }, [ttsEnabled]);
 
@@ -69,9 +81,17 @@ function App() {
         loadVoices();
 
         // Chrome requires this event listener
-        if (window.speechSynthesis.onvoiceschanged !== undefined) {
-            window.speechSynthesis.onvoiceschanged = loadVoices;
+        // Use addEventListener to ensure compatibility and avoid overwriting other handlers
+        if (typeof window.speechSynthesis.onvoiceschanged !== 'undefined') {
+            window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
         }
+
+        return () => {
+            // Clean up event listener
+            if (typeof window.speechSynthesis.onvoiceschanged !== 'undefined') {
+                window.speechSynthesis.removeEventListener('voiceschanged', loadVoices);
+            }
+        };
     }, []);
 
     /**
@@ -92,15 +112,27 @@ function App() {
         utterance.volume = 1;
 
         // Try to use a professional-sounding voice from state
-        const englishVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'))
-            || voices.find(v => v.lang.startsWith('en'));
+        // Handle case where voices might not be loaded yet
+        const voicesToUse = voices.length > 0 ? voices : window.speechSynthesis.getVoices();
+        const englishVoice = voicesToUse.find(v => v.lang.startsWith('en') && v.name.includes('Google'))
+            || voicesToUse.find(v => v.lang.startsWith('en'));
 
-        if (englishVoice) utterance.voice = englishVoice;
+        if (englishVoice) {
+            utterance.voice = englishVoice;
+        }
 
         utterance.onerror = (e) => {
             if (e.error !== 'interrupted') {
-                console.error('TTS Error:', e);
+                console.error('TTS Error:', e.error);
             }
+        };
+
+        utterance.onstart = () => {
+            // Optional: Track when speech starts
+        };
+
+        utterance.onend = () => {
+            // Optional: Track when speech ends
         };
 
         window.speechSynthesis.speak(utterance);

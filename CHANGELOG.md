@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.1.2] — 2026-02-15
+
+### 🐛 Fixed
+- **Text-to-Speech Reliability**: Improved TTS initialization and voice loading across all browsers.
+    - Fixed voice event listener using proper `addEventListener()` instead of property assignment to avoid handler conflicts.
+    - Added fallback voice loading in `speakPhrase()` to handle timing issues when voices haven't loaded from state.
+    - Wrapped TTS priming in try-catch with promise error handling for safer initialization.
+    - Enhanced error logging to show specific error types instead of full error objects.
+    - Added proper cleanup of voice change event listeners to prevent memory leaks.
+    - Added `onstart` and `onend` callbacks for better speech lifecycle tracking.
+
+---
+
 ## [3.1.1] — 2026-02-10
 
 ### 🐛 Fixed
