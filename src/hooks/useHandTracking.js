@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { loadGestureModel, predictGesture } from '../ml/gestureModel';
+import { processGestureFrame, onHandLost } from '../ml/gestureDecisionEngine';
 
 /**
  * Custom React Hook for Hand Tracking with ML Gesture Classification
@@ -116,21 +117,33 @@ function useHandTracking({ videoRef, canvasRef, onGestureDetected, onLoadingComp
                         // Expose landmarks for Training Mode capture
                         if (landmarksRef) landmarksRef.current = landmarks;
 
-                        // ML classification (replaces rule-based classifier)
-                        const { gestureType, phrase } = predictGesture(landmarks);
+                        // ML classification: Get raw prediction from model
+                        const mlPrediction = predictGesture(landmarks);
 
-                        const gestureKey = gestureType || 'none';
-                        if (gestureKey !== lastGestureRef.current) {
-                            lastGestureRef.current = gestureKey;
-                            onGestureDetected?.({ phrase, gestureType });
+                        // Pass through decision engine for stability voting, gating, cooldown
+                        const finalGesture = processGestureFrame(mlPrediction, landmarks);
+
+                        // Only trigger UI update if gesture was accepted by decision engine
+                        if (finalGesture) {
+                            const gestureKey = finalGesture.gestureType || 'none';
+                            onGestureDetected?.({
+                                phrase: finalGesture.phrase,
+                                gestureType: finalGesture.gestureType
+                            });
                         }
                     } else {
+                        // Hand disappeared
                         setIsHandDetected(false);
                         if (landmarksRef) landmarksRef.current = null;
-                        if (lastGestureRef.current !== 'none') {
-                            lastGestureRef.current = 'none';
-                            onGestureDetected?.({ phrase: 'Waiting for input…', gestureType: null });
-                        }
+
+                        // Notify decision engine that hand is gone
+                        onHandLost();
+
+                        // Trigger "waiting" state
+                        onGestureDetected?.({
+                            phrase: 'Waiting for input…',
+                            gestureType: null
+                        });
                     }
                 });
 

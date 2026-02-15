@@ -3,7 +3,7 @@
 > *Translate your hand gestures into peak corporate jargon — powered by AI, running entirely in your browser.*
 
 [![Live Demo](https://img.shields.io/badge/demo-live-brightgreen?style=flat-square)](https://corporate-hand-translator.vercel.app)
-[![Version](https://img.shields.io/badge/version-3.1.2-blue?style=flat-square)](#changelog)
+[![Version](https://img.shields.io/badge/version-3.2.0-blue?style=flat-square)](#changelog)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![TensorFlow.js](https://img.shields.io/badge/TensorFlow.js-v4.17-orange?style=flat-square&logo=tensorflow)](https://www.tensorflow.org/js)
 [![Vercel](https://img.shields.io/badge/deployed%20on-Vercel-black?style=flat-square&logo=vercel)](https://vercel.com)
@@ -77,6 +77,50 @@ Save to IndexedDB → Auto-load on next visit
 
 ---
 
+## �️ Gesture Decision Engine (v3.2+)
+
+**The problem**: Raw ML predictions jitter frame-to-frame, causing false gesture triggers and repeated TTS.
+
+**The solution**: A deterministic decision layer that hardens real-world reliability without retraining.
+
+### What It Does
+
+| Problem | Solution | Benefit |
+|---------|----------|---------|
+| CLOSED_FIST misclassified as THUMBS_UP | **Thumb Dominance Gate** — requires thumb 30% more extended than other fingers | No more false "I am fully aligned" when making a fist |
+| Camera jitter flips between gestures | **Stability Voting** — requires 8 consecutive frames of same gesture | Smooth, intentional-feeling gestures |
+| Same gesture triggers TTS repeatedly | **Intent Lock** — 2.5s cooldown after acceptance | Corporate phrases don't spam |
+
+### Configuration
+
+Located in `src/ml/gestureDecisionEngine.js`:
+
+```javascript
+STABILITY_FRAMES = 8              // Frames to stabilize (higher = stricter)
+GESTURE_COOLDOWN_MS = 2500        // Cooldown after acceptance
+THUMB_DOMINANCE_THRESHOLD = 1.3   // Thumb extension factor (higher = stricter)
+CONFIDENCE_TIE_BREAK_THRESHOLD = 0.1  // Confidence tie-breaker margin
+```
+
+### For Developers
+
+Debug gesture decisions in the browser console:
+
+```javascript
+import { getEngineState } from './src/ml/gestureDecisionEngine';
+
+// Check engine state at any time
+console.log(getEngineState());
+// Output: {
+//   acceptedGesture: 'THUMBS_UP',
+//   inCooldown: true,
+//   stabilityBufferSize: 8,
+//   cooldownTimeRemaining: 1500
+// }
+```
+
+---
+
 ## 🛠️ Tech Stack
 
 | Layer | Technology |
@@ -85,6 +129,7 @@ Save to IndexedDB → Auto-load on next visit
 | **Styling** | Tailwind CSS 3 |
 | **Hand Tracking** | MediaPipe Hands (CDN) |
 | **ML Inference** | TensorFlow.js 4.17 |
+| **Decision Logic** | Gesture Decision Engine (in-browser) |
 | **Speech** | Web Speech API (native) |
 | **Hosting** | Vercel (static) |
 

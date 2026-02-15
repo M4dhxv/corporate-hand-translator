@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.2.0] — 2026-02-15
+
+### ✨ Added - Gesture Decision Engine
+
+**Major usability improvement**: Fixed real-world gesture confusion and jitter problems without retraining the ML model.
+
+Introduces `gestureDecisionEngine.js` — a deterministic, frame-by-frame decision layer that sits between raw ML predictions and UI triggers. This hardens the gesture recognition system for real-world use.
+
+#### What was fixed:
+
+- **Gesture Confusion (CLOSED_FIST ↔ THUMBS_UP)**
+    - Implemented **Thumb Dominance Gate**: THUMBS_UP now requires the thumb to be significantly more extended than all other fingers
+    - If thumb is not dominant, the gesture is reclassified as CLOSED_FIST
+    - Eliminates false THUMBS_UP when fist has thumb slightly peeking out
+    - Threshold: 1.3× (configurable) — thumb distance must be 30% greater than max other finger distance
+
+- **Frame-to-Frame Jitter**
+    - Implemented **Stability Voting**: Requires 8 consecutive frames of the same gesture before accepting it
+    - Small camera jitter that flip-flops between gestures no longer triggers repeated TTS
+    - Smooth, natural interaction that feels intentional
+
+- **Gesture Spam / Repeated TTS**
+    - Implemented **Intent Lock with Cooldown**: Once a gesture is accepted, it's locked for 2.5 seconds
+    - During cooldown, all new gesture predictions are silently ignored
+    - Prevents re-triggering the same corporate phrase when hand jitters
+    - Cooldown resets when hand disappears
+    - Configurable: `GESTURE_COOLDOWN_MS` (default 2500)
+
+- **Conservative Tie-Breaking** (forward-compatible)
+    - Code structure ready for confidence-aware tie-breaking
+    - When two gestures have similar confidence, conservative gestures win
+    - Example: THUMBS_UP (75% confidence) vs CLOSED_FIST (68% confidence) → prefer CLOSED_FIST if margin < 10%
+    - Ranking: OPEN_PALM > POINTING_UP > PEACE_SIGN > CLOSED_FIST > THUMBS_UP
+
+#### New Files:
+- `src/ml/gestureDecisionEngine.js` — Core decision logic with all gates and voting
+
+#### Modified Files:
+- `src/ml/gestureModel.js` — Now exposes full probability distribution for tie-breaking
+- `src/hooks/useHandTracking.js` — Integrated decision engine into frame processing pipeline
+
+#### Code Quality:
+- **Fully documented**: Each gate has explicit comments explaining the WHY
+- **Debuggable**: `getEngineState()` API for inspecting decision state frame-by-frame
+- **Testable**: Pure functions with explicit geometry checks (no hidden heuristics)
+- **Zero-cost**: No additional ML, no API calls, 100% browser-side
+
+#### Configuration (in `gestureDecisionEngine.js`):
+```javascript
+STABILITY_FRAMES = 8              // Frames required to stabilize
+GESTURE_COOLDOWN_MS = 2500        // Cooldown after acceptance (ms)
+THUMB_DOMINANCE_THRESHOLD = 1.3   // Thumb distance factor (higher = stricter)
+CONFIDENCE_TIE_BREAK_THRESHOLD = 0.1  // Confidence margin for tie-breaking
+```
+
+---
+
 ## [3.1.2] — 2026-02-15
 
 ### 🐛 Fixed

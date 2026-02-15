@@ -204,8 +204,11 @@ export function preprocessLandmarks(landmarks) {
  * Handles full pipeline: preprocess → infer → postprocess.
  * All intermediate tensors are properly disposed to prevent memory leaks.
  * 
+ * Returns full probability distribution (for decision engine tie-breaking)
+ * and top prediction for backward compatibility.
+ * 
  * @param {Array<{x: number, y: number, z: number}>} landmarks - 21 MediaPipe landmarks
- * @returns {{ gestureType: string|null, phrase: string, label: string, confidence: number }}
+ * @returns {{ gestureType: string|null, phrase: string, label: string, confidence: number, probabilities: object }}
  */
 export function predictGesture(landmarks) {
     if (!cachedModel || !landmarks || landmarks.length !== 21) {
@@ -213,7 +216,8 @@ export function predictGesture(landmarks) {
             gestureType: null,
             phrase: 'Waiting for input…',
             label: 'NONE',
-            confidence: 0
+            confidence: 0,
+            probabilities: {}
         };
     }
 
@@ -235,10 +239,16 @@ export function predictGesture(landmarks) {
             }
         }
 
-        return { maxIdx, maxConf };
+        // Build probability distribution map for decision engine
+        const probMap = {};
+        for (let i = 0; i < GESTURE_LABELS.length; i++) {
+            probMap[GESTURE_LABELS[i]] = probabilities[i];
+        }
+
+        return { maxIdx, maxConf, probMap };
     });
 
-    const { maxIdx, maxConf } = result;
+    const { maxIdx, maxConf, probMap } = result;
 
     // Apply confidence threshold
     if (maxConf < CONFIDENCE_THRESHOLD) {
@@ -246,7 +256,8 @@ export function predictGesture(landmarks) {
             gestureType: null,
             phrase: 'Waiting for input…',
             label: 'NONE',
-            confidence: maxConf
+            confidence: maxConf,
+            probabilities: probMap
         };
     }
 
@@ -256,7 +267,8 @@ export function predictGesture(landmarks) {
         gestureType: LABEL_TO_GESTURE_TYPE[label],
         phrase: LABEL_TO_PHRASE[label],
         label,
-        confidence: maxConf
+        confidence: maxConf,
+        probabilities: probMap
     };
 }
 
