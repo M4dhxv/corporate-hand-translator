@@ -18,10 +18,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - When model confidence is ambiguous (within 0.15), counts extended fingers to determine correct gesture
     - If 3+ fingers are extended, correctly classifies as open palm instead of pointing
 
+### 🎨 UI/UX Improvements
+
+#### Changed
+- **Control Button Placement**: Moved voice and personalization toggles to top-right of video feed
+    - Buttons now overlay the video with glassmorphism effect (`backdrop-blur-sm`)
+    - Compact design with responsive labels (hidden on mobile, visible on desktop)
+    - Removed external floating control cluster for cleaner layout
+- **Gesture Legend**: Added gesture options overlay at bottom of video feed
+    - 5-column grid showing all available gestures (✋ ✊ 👍 ☝️ ✌️)
+    - Active gesture highlighted with green glow effect
+    - Glassmorphism styling with semi-transparent backgrounds
+    - Labels hidden on mobile to save space
+- **Better Visual Hierarchy**: Video feed is now the clear focal point with all controls accessible without leaving the viewport
+
 #### Technical Details
 - Modified `src/ml/gestureModel.js` — Enhanced `predictGesture()` with finger counting heuristic
+- Modified `src/App.jsx` — Restructured UI with video overlays for controls and gesture legend
 - Integrated seamlessly with v5.0.0's macOS-style UI
-- No UI changes required — improvements work with existing layout
+- No breaking changes to existing functionality
 
 ---
 

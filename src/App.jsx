@@ -56,7 +56,7 @@ function App() {
                 silentUtterance.volume = 0;
                 const speakPromise = window.speechSynthesis.speak(silentUtterance);
                 if (speakPromise && speakPromise.catch) {
-                    speakPromise.catch(() => {});
+                    speakPromise.catch(() => { });
                 }
             } catch (err) {
                 console.debug('TTS priming failed:', err.message);
@@ -137,7 +137,7 @@ function App() {
         <div className={`${darkMode ? 'dark' : ''}`}>
             {/* Root container - fixed viewport utility layout */}
             <div className="h-screen w-screen bg-white dark:bg-neutral-950 transition-colors duration-300 flex flex-col overflow-hidden">
-                
+
                 {/* Minimalist header */}
                 <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-neutral-200/50 dark:border-neutral-800/50 flex-shrink-0">
                     <div className="min-w-0">
@@ -164,13 +164,13 @@ function App() {
 
                 {/* Main content area - centered video card with controls */}
                 <main className="flex-1 flex items-center justify-center px-4 sm:px-6 overflow-hidden relative">
-                    
+
                     {/* Fixed video card - the product */}
                     <div className="relative w-full max-w-3xl">
-                        
+
                         {/* Video container with rounded corners */}
                         <div className="rounded-3xl overflow-hidden shadow-2xl border border-neutral-200/50 dark:border-neutral-800/50 bg-black">
-                            
+
                             {/* Loading state */}
                             {isLoading && (
                                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
@@ -198,12 +198,11 @@ function App() {
                             <div className="px-4 py-3 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-sm border-t border-neutral-200/50 dark:border-neutral-800/50">
                                 <div className="flex items-center justify-between gap-3 text-xs">
                                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                                        <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 transition-all ${
-                                            gestureType ? 'bg-green-500 animate-pulse' : 'bg-neutral-300 dark:bg-neutral-600'
-                                        }`} />
+                                        <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 transition-all ${gestureType ? 'bg-green-500 animate-pulse' : 'bg-neutral-300 dark:bg-neutral-600'
+                                            }`} />
                                         <div className="min-w-0">
                                             <p className="text-neutral-500 dark:text-neutral-400 leading-tight">
-                                                {gestureType 
+                                                {gestureType
                                                     ? gestureType.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
                                                     : 'Waiting…'
                                                 }
@@ -219,52 +218,64 @@ function App() {
                             </div>
                         </div>
 
-                        {/* Floating control cluster - bottom-right of video card */}
-                        <div className="absolute -bottom-20 -right-20 w-40 space-y-2">
-                            
-                            {/* Voice state indicator */}
+                        {/* Control buttons - top-right of video feed */}
+                        <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
+                            {/* Voice toggle */}
                             <button
                                 onClick={() => setVoiceEnabled(!voiceEnabled)}
-                                className="w-full px-3 py-2.5 rounded-xl text-xs font-medium transition-all
-                                    bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800
-                                    hover:bg-neutral-50 dark:hover:bg-neutral-800/50
-                                    shadow-lg dark:shadow-2xl backdrop-blur-sm"
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all
+                                    bg-white/90 dark:bg-neutral-900/90 border border-neutral-200/50 dark:border-neutral-800/50
+                                    hover:bg-white dark:hover:bg-neutral-900
+                                    shadow-lg backdrop-blur-sm"
+                                title={voiceEnabled ? 'Voice On' : 'Voice Off'}
                             >
-                                <div className="flex items-center justify-between gap-2">
-                                    <span>{voiceEnabled ? '🔊' : '🔇'}</span>
-                                    <span className="text-neutral-700 dark:text-neutral-300">
-                                        {voiceEnabled ? 'Voice On' : 'Voice Off'}
-                                    </span>
-                                </div>
+                                <span>{voiceEnabled ? '🔊' : '🔇'}</span>
+                                <span className="text-neutral-700 dark:text-neutral-300 hidden sm:inline">
+                                    {voiceEnabled ? 'Voice' : 'Muted'}
+                                </span>
                             </button>
 
-                            {/* Personalize gestures */}
+                            {/* Personalize button */}
                             <button
                                 onClick={() => setTrainingMode(true)}
-                                className="w-full px-3 py-2.5 rounded-xl text-xs font-medium transition-all
-                                    bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800
-                                    hover:bg-neutral-50 dark:hover:bg-neutral-800/50
-                                    shadow-lg dark:shadow-2xl backdrop-blur-sm
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all
+                                    bg-white/90 dark:bg-neutral-900/90 border border-neutral-200/50 dark:border-neutral-800/50
+                                    hover:bg-white dark:hover:bg-neutral-900
+                                    shadow-lg backdrop-blur-sm
                                     text-neutral-700 dark:text-neutral-300"
+                                title="Personalize Gestures"
                             >
-                                ✏️ Personalize
+                                <span>✏️</span>
+                                <span className="hidden sm:inline">Personalize</span>
                             </button>
+                        </div>
 
-                            {/* Reset / Recalibrate */}
-                            <button
-                                onClick={() => {
-                                    if (confirm('Reset hand tracking to default settings?')) {
-                                        window.location.reload();
-                                    }
-                                }}
-                                className="w-full px-3 py-2.5 rounded-xl text-xs font-medium transition-all
-                                    bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800
-                                    hover:bg-neutral-50 dark:hover:bg-neutral-800/50
-                                    shadow-lg dark:shadow-2xl backdrop-blur-sm
-                                    text-neutral-700 dark:text-neutral-300"
-                            >
-                                ⟲ Reset
-                            </button>
+                        {/* Gesture legend - bottom of video feed */}
+                        <div className="absolute bottom-3 left-3 right-3 z-20">
+                            <div className="grid grid-cols-5 gap-2 text-center">
+                                {[
+                                    { gesture: '✋', label: 'Open Palm', key: 'open-palm' },
+                                    { gesture: '✊', label: 'Fist', key: 'fist' },
+                                    { gesture: '👍', label: 'Thumbs Up', key: 'thumbs-up' },
+                                    { gesture: '☝️', label: 'Pointing', key: 'pointing' },
+                                    { gesture: '✌️', label: 'Peace', key: 'peace' },
+                                ].map((item) => (
+                                    <div
+                                        key={item.key}
+                                        className={`
+                                            p-2 rounded-lg backdrop-blur-sm transition-all duration-300
+                                            ${gestureType === item.key
+                                                ? 'bg-green-500/30 border border-green-400/50 scale-105'
+                                                : 'bg-white/40 dark:bg-neutral-900/40 border border-neutral-200/30 dark:border-neutral-800/30 hover:bg-white/60 dark:hover:bg-neutral-900/60'}
+                                        `}
+                                    >
+                                        <span className="text-xl sm:text-2xl">{item.gesture}</span>
+                                        <p className="text-[10px] sm:text-xs mt-0.5 text-neutral-700 dark:text-neutral-300 hidden sm:block">
+                                            {item.label}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </main>
