@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [5.1.0] — 2026-02-16
+
+### 🎯 Improved Gesture Detection
+
+#### Fixed
+- **Open Palm vs Pointing Confusion**: Fixed issue where open palm gestures were incorrectly detected as pointing gestures
+    - Lowered ML confidence threshold from 0.65 to 0.60 for better sensitivity
+    - Added intelligent heuristic logic to distinguish between similar gestures
+    - When model confidence is ambiguous (within 0.15), counts extended fingers to determine correct gesture
+    - If 3+ fingers are extended, correctly classifies as open palm instead of pointing
+
+#### Technical Details
+- Modified `src/ml/gestureModel.js` — Enhanced `predictGesture()` with finger counting heuristic
+- Integrated seamlessly with v5.0.0's macOS-style UI
+- No UI changes required — improvements work with existing layout
+
+---
+
 ## [5.0.0] — 2026-02-16
 
 ### 🎬 Major UI Redesign: macOS Utility Layout

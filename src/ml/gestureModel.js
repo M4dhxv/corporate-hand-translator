@@ -55,7 +55,7 @@ const LABEL_TO_GESTURE_TYPE = {
 };
 
 /** Minimum confidence to accept a prediction */
-const CONFIDENCE_THRESHOLD = 0.65;
+const CONFIDENCE_THRESHOLD = 0.60;
 
 // ──────────────────────────────────────────────
 // Module-scoped model cache (loaded once)
@@ -262,6 +262,36 @@ export function predictGesture(landmarks) {
     }
 
     const label = GESTURE_LABELS[maxIdx];
+
+    // Additional heuristic: Distinguish OPEN_PALM from POINTING_UP
+    // If both have similar confidence, check finger extension count
+    if (label === 'POINTING_UP') {
+        const openPalmIdx = GESTURE_LABELS.indexOf('OPEN_PALM');
+        const openPalmConf = probMap['OPEN_PALM'];
+
+        // If open palm confidence is close to pointing confidence, prefer open palm
+        // This helps when all fingers are extended but model is confused
+        if (openPalmConf > 0.4 && Math.abs(maxConf - openPalmConf) < 0.15) {
+            // Count extended fingers using simple heuristic
+            const indexExtended = landmarks[8].y < landmarks[6].y;
+            const middleExtended = landmarks[12].y < landmarks[10].y;
+            const ringExtended = landmarks[16].y < landmarks[14].y;
+            const pinkyExtended = landmarks[20].y < landmarks[18].y;
+
+            const extendedCount = [indexExtended, middleExtended, ringExtended, pinkyExtended].filter(Boolean).length;
+
+            // If 3 or more fingers extended, it's likely open palm
+            if (extendedCount >= 3) {
+                return {
+                    gestureType: LABEL_TO_GESTURE_TYPE['OPEN_PALM'],
+                    phrase: LABEL_TO_PHRASE['OPEN_PALM'],
+                    label: 'OPEN_PALM',
+                    confidence: openPalmConf,
+                    probabilities: probMap
+                };
+            }
+        }
+    }
 
     return {
         gestureType: LABEL_TO_GESTURE_TYPE[label],
