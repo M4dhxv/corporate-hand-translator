@@ -1,5 +1,5 @@
 /**
- * gestureDecisionEngine.js — Gesture Validation & Debouncing
+ * gestureDecisionEngine.ts — Gesture Validation & Debouncing
  *
  * This module sits between raw ML predictions and UI/TTS triggers.
  * It applies heuristic gates and stability voting to prevent:
@@ -17,6 +17,9 @@
  * This is a deterministic, frame-by-frame decision engine.
  * All decisions are explainable and debuggable.
  */
+
+import { getGestureTypeForLabel, getPhraseForLabel } from '../config/gestureConfig';
+import type { Landmark, MLPrediction, StabilityEntry, GestureResult, EngineState } from '../types';
 
 // ──────────────────────────────────────────────
 // Configuration
@@ -38,10 +41,11 @@ const THUMB_DOMINANCE_THRESHOLD = 1.3;
 /**
  * Confidence tie-break threshold.
  * If two gestures differ by less than this, prefer the conservative one.
- * Example: THUMBS_UP (0.75) and CLOSED_FIST (0.68) → diff is 0.07 < 0.1
- * → prefer CLOSED_FIST (conservative wins).
+ * Reserved for future use when full probability distributions are exposed.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const CONFIDENCE_TIE_BREAK_THRESHOLD = 0.1;
+void CONFIDENCE_TIE_BREAK_THRESHOLD;
 
 // ──────────────────────────────────────────────
 // MediaPipe hand landmark indices
@@ -54,44 +58,36 @@ const LANDMARKS = {
     MIDDLE_TIP: 12,
     RING_TIP: 16,
     PINKY_TIP: 20
-};
+} as const;
 
 // ──────────────────────────────────────────────
 // Gesture Decision Engine Class
 // ──────────────────────────────────────────────
 
 class GestureDecisionEngine {
+    /** Stability buffer: stores last N predictions to vote on gesture. */
+    stabilityBuffer: StabilityEntry[];
+
+    /** Currently accepted gesture (what we last fired to UI). */
+    acceptedGesture: string | null;
+
+    /** Timestamp when the current gesture was accepted. */
+    acceptedTimestamp: number;
+
+    /** Whether we're currently in cooldown. */
+    inCooldown: boolean;
+
     constructor() {
-        /**
-         * Stability buffer: stores last N predictions to vote on gesture.
-         * Each entry: { label: string, confidence: number, timestamp: number }
-         */
         this.stabilityBuffer = [];
-
-        /**
-         * Currently accepted gesture (what we last fired to UI).
-         * Prevents re-triggering same gesture repeatedly.
-         */
         this.acceptedGesture = null;
-
-        /**
-         * Timestamp when the current gesture was accepted.
-         * Used to enforce cooldown.
-         */
         this.acceptedTimestamp = 0;
-
-        /**
-         * Whether we're currently in cooldown.
-         * During cooldown, gestures are silently ignored.
-         */
         this.inCooldown = false;
     }
 
     /**
      * Reset the engine state (e.g., when hand disappears).
-     * Called when no hand is detected.
      */
-    reset() {
+    reset(): void {
         this.stabilityBuffer = [];
         this.acceptedGesture = null;
         this.acceptedTimestamp = 0;
@@ -100,13 +96,8 @@ class GestureDecisionEngine {
 
     /**
      * Compute distance from wrist to a landmark.
-     * Used for thumb dominance gating.
-     *
-     * @param {object} wrist - Wrist landmark { x, y, z }
-     * @param {object} tip - Finger tip landmark { x, y, z }
-     * @returns {number} Euclidean distance
      */
-    _computeDistance(wrist, tip) {
+    _computeDistance(wrist: Landmark, tip: Landmark): number {
         const dx = tip.x - wrist.x;
         const dy = tip.y - wrist.y;
         const dz = tip.z - wrist.z;
@@ -122,11 +113,8 @@ class GestureDecisionEngine {
      *   3. THUMBS_UP is only valid if:
      *      - Thumb distance > THRESHOLD × max(other finger distances)
      *      - If not, the gesture is likely CLOSED_FIST with thumb peeking out
-     *
-     * @param {Array} landmarks - 21 MediaPipe hand landmarks
-     * @returns {boolean} True if thumb dominance is satisfied
      */
-    _validateThumbDominance(landmarks) {
+    _validateThumbDominance(landmarks: Landmark[]): boolean {
         const wrist = landmarks[LANDMARKS.WRIST];
         const thumbDist = this._computeDistance(wrist, landmarks[LANDMARKS.THUMB_TIP]);
         const indexDist = this._computeDistance(wrist, landmarks[LANDMARKS.INDEX_TIP]);
@@ -137,47 +125,14 @@ class GestureDecisionEngine {
         const otherFingerDists = [indexDist, middleDist, ringDist, pinkyDist];
         const maxOtherDist = Math.max(...otherFingerDists);
 
-        // Thumb must be significantly more extended than all other fingers
-        const isThumpsUpValid = thumbDist > THUMB_DOMINANCE_THRESHOLD * maxOtherDist;
-
-        // Debug: uncomment to see per-frame thumb geometry
-        // console.log(`[THUMB GATE] thumb=${thumbDist.toFixed(2)} max_other=${maxOtherDist.toFixed(2)} valid=${isThumpsUpValid}`);
-
-        return isThumpsUpValid;
+        return thumbDist > THUMB_DOMINANCE_THRESHOLD * maxOtherDist;
     }
 
     /**
      * Apply confidence-aware tie breaking.
-     *
-     * Conservative heuristic: if two gestures are close in confidence,
-     * prefer the more conservative gesture (less likely to cause misfire).
-     *
-     * Gesture conservativeness ranking (most → least conservative):
-     *   1. OPEN_PALM (always safe, hard to confuse)
-     *   2. POINTING_UP (clear intent)
-     *   3. PEACE_SIGN (very distinct)
-     *   4. CLOSED_FIST (conservative vs. expressive)
-     *   5. THUMBS_UP (most expressive, most likely to be confused)
-     *
-     * @param {string} label - Raw prediction label
-     * @param {number} confidence - Raw prediction confidence
-     * @param {object} fullPredictionObject - Full prediction with all probabilities
-     * @returns {string} Final label after tie-breaking
+     * Forward-compatible hook for future ML improvements.
      */
-    _applyTieBreaking(label, confidence, fullPredictionObject) {
-        /**
-         * WARNING: fullPredictionObject is currently NOT available
-         * in the current predictGesture() output. This is a
-         * forward-compatible hook for future ML improvements.
-         *
-         * For now, we use single-label output. Tie-breaking will be
-         * more powerful once we expose full probability distributions.
-         */
-
-        // Future: Once predictGesture() exposes all probabilities:
-        // if (label === 'THUMBS_UP' && CLOSED_FIST probability is close)
-        //   → return 'CLOSED_FIST' (conservative wins)
-
+    _applyTieBreaking(label: string, _confidence: number, _fullPredictionObject: unknown): string {
         return label;
     }
 
@@ -187,18 +142,12 @@ class GestureDecisionEngine {
      * Gates (in order):
      *   1. Thumb dominance: if THUMBS_UP, validate thumb extension
      *   2. Tie-breaking: if close confidence, prefer conservative gesture
-     *
-     * @param {string} label - Raw prediction label
-     * @param {number} confidence - Raw prediction confidence
-     * @param {Array} landmarks - 21 MediaPipe landmarks
-     * @returns {string} Final label after gates (may reject THUMBS_UP → CLOSED_FIST)
      */
-    _applyDecisionGates(label, confidence, landmarks) {
+    _applyDecisionGates(label: string, confidence: number, landmarks: Landmark[]): string {
         // Gate 1: Thumb Dominance
         if (label === 'THUMBS_UP') {
             const isValid = this._validateThumbDominance(landmarks);
             if (!isValid) {
-                // Thumb is not dominant → this is actually CLOSED_FIST with thumb out
                 return 'CLOSED_FIST';
             }
         }
@@ -211,52 +160,35 @@ class GestureDecisionEngine {
 
     /**
      * Feed a new frame into the stability voting system.
-     *
-     * Accumulates predictions in a rolling buffer. Once the buffer
-     * contains STABILITY_FRAMES of the same gesture, that gesture
-     * is considered "stable" and can be accepted.
-     *
-     * @param {string} label - Gesture label
-     * @param {number} confidence - Prediction confidence
-     * @returns {string|null} Stable gesture (same for N frames) or null
      */
-    _updateStabilityBuffer(label, confidence) {
-        // Add new prediction
+    _updateStabilityBuffer(label: string, confidence: number): string | null {
         this.stabilityBuffer.push({
             label,
             confidence,
             timestamp: Date.now()
         });
 
-        // Keep buffer size bounded
         if (this.stabilityBuffer.length > STABILITY_FRAMES) {
             this.stabilityBuffer.shift();
         }
 
-        // Check if all recent frames agree
         if (this.stabilityBuffer.length === STABILITY_FRAMES) {
             const allSame = this.stabilityBuffer.every(
                 (p) => p.label === this.stabilityBuffer[0].label
             );
 
             if (allSame) {
-                // All frames agree → gesture is stable
                 return this.stabilityBuffer[0].label;
             }
         }
 
-        // Not enough consensus yet
         return null;
     }
 
     /**
      * Check if we're in gesture cooldown period.
-     * Returns true if less than GESTURE_COOLDOWN_MS have elapsed
-     * since the last accepted gesture.
-     *
-     * @returns {boolean}
      */
-    _isInCooldown() {
+    _isInCooldown(): boolean {
         if (!this.inCooldown || this.acceptedTimestamp === 0) {
             return false;
         }
@@ -280,34 +212,24 @@ class GestureDecisionEngine {
      *   3. Feed into stability voting buffer
      *   4. If stable, accept gesture
      *   5. If gesture changed, trigger UI update
-     *
-     * @param {object} mlPrediction - Output from predictGesture()
-     *                  { label: string, confidence: number, gestureType: string, phrase: string }
-     * @param {Array} landmarks - 21 MediaPipe hand landmarks
-     * @returns {object|null} Final gesture to trigger UI with, or null if no trigger
-     *                        { label: string, gestureType: string, phrase: string, reason: string }
      */
-    processFrame(mlPrediction, landmarks) {
-        const { label, confidence, gestureType, phrase } = mlPrediction;
+    processFrame(mlPrediction: MLPrediction, landmarks: Landmark[]): GestureResult | null {
+        const { label, confidence } = mlPrediction;
 
         // Ignore if gesture is null (low confidence from model)
         if (!label || label === 'NONE') {
-            // Hand still there, but no gesture confidence
-            // Don't reset buffer yet (allows gesture to stabilize across low-confidence frames)
             return null;
         }
 
         // Check cooldown: ignore all gestures during cooldown
         if (this._isInCooldown()) {
-            // Silently ignore
             return null;
         }
 
         // Apply decision gates (thumb dominance, tie-breaking)
         const gatedLabel = this._applyDecisionGates(label, confidence, landmarks);
 
-        // The gated label might differ from the original (e.g., THUMBS_UP → CLOSED_FIST)
-        // Map back to phrase and gestureType using a lookup table
+        // Map gated label to phrase and gestureType
         const finalGestureType = this._labelToGestureType(gatedLabel);
         const finalPhrase = this._labelToPhrase(gatedLabel);
 
@@ -317,11 +239,10 @@ class GestureDecisionEngine {
         // If gesture is stable, check if it's new
         if (stableLabel) {
             if (stableLabel !== this.acceptedGesture) {
-                // New gesture detected → accept it
                 this.acceptedGesture = stableLabel;
                 this.acceptedTimestamp = Date.now();
                 this.inCooldown = true;
-                this.stabilityBuffer = []; // Reset buffer after acceptance
+                this.stabilityBuffer = [];
 
                 return {
                     label: stableLabel,
@@ -332,15 +253,13 @@ class GestureDecisionEngine {
             }
         }
 
-        // Same gesture held or not yet stable
         return null;
     }
 
     /**
      * Notify engine that hand disappeared.
-     * This clears all buffers and ends cooldown.
      */
-    onHandDisappear() {
+    onHandDisappear(): void {
         this.reset();
     }
 
@@ -348,26 +267,12 @@ class GestureDecisionEngine {
     // Utility: Label → UI mappings
     // ──────────────────────────────────────────────
 
-    _labelToGestureType(label) {
-        const mapping = {
-            'OPEN_PALM': 'open-palm',
-            'CLOSED_FIST': 'fist',
-            'THUMBS_UP': 'thumbs-up',
-            'POINTING_UP': 'pointing',
-            'PEACE_SIGN': 'peace'
-        };
-        return mapping[label] || null;
+    _labelToGestureType(label: string): string | null {
+        return getGestureTypeForLabel(label);
     }
 
-    _labelToPhrase(label) {
-        const mapping = {
-            'OPEN_PALM': "Let's put a pin in that for now.",
-            'CLOSED_FIST': "We need to circle back to the core deliverables.",
-            'THUMBS_UP': "I am fully aligned with this initiative.",
-            'POINTING_UP': "Let's take this offline.",
-            'PEACE_SIGN': "We have verified the cross-functional synergy."
-        };
-        return mapping[label] || 'Waiting for input…';
+    _labelToPhrase(label: string): string {
+        return getPhraseForLabel(label);
     }
 }
 
@@ -379,26 +284,22 @@ export const gestureDecisionEngine = new GestureDecisionEngine();
 
 /**
  * Public API: Process a frame through the decision engine.
- *
- * @param {object} mlPrediction - Raw ML output
- * @param {Array} landmarks - MediaPipe hand landmarks
- * @returns {object|null} Final gesture or null
  */
-export function processGestureFrame(mlPrediction, landmarks) {
+export function processGestureFrame(mlPrediction: MLPrediction, landmarks: Landmark[]): GestureResult | null {
     return gestureDecisionEngine.processFrame(mlPrediction, landmarks);
 }
 
 /**
  * Public API: Notify engine that hand disappeared.
  */
-export function onHandLost() {
+export function onHandLost(): void {
     gestureDecisionEngine.onHandDisappear();
 }
 
 /**
  * Public API: Get current decision engine state (for debugging).
  */
-export function getEngineState() {
+export function getEngineState(): EngineState {
     return {
         acceptedGesture: gestureDecisionEngine.acceptedGesture,
         inCooldown: gestureDecisionEngine.inCooldown,

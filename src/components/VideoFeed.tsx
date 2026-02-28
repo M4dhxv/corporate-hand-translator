@@ -1,21 +1,18 @@
 import { useRef, useEffect, useState } from 'react';
 import useHandTracking from '../hooks/useHandTracking';
+import type { VideoFeedProps } from '../types';
 
 /**
  * VideoFeed Component
- * 
+ *
  * Displays the webcam feed with a canvas overlay for hand skeleton visualization.
  * Uses the useHandTracking hook for MediaPipe integration.
- * 
- * @param {Object} props
- * @param {Function} props.onGestureDetected - Callback when gesture is detected
- * @param {Function} props.onLoadingComplete - Callback when MediaPipe is ready
  */
-function VideoFeed({ onGestureDetected, onLoadingComplete, landmarksRef }) {
-    const videoRef = useRef(null);
-    const canvasRef = useRef(null);
-    const containerRef = useRef(null);
-    const [dimensions, setDimensions] = useState({ width: 640, height: 480 });
+function VideoFeed({ onGestureDetected, onLoadingComplete, landmarksRef }: VideoFeedProps) {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [_dimensions, setDimensions] = useState({ width: 640, height: 480 });
 
     // Initialize hand tracking hook
     const { isInitialized, isHandDetected } = useHandTracking({
@@ -55,7 +52,7 @@ function VideoFeed({ onGestureDetected, onLoadingComplete, landmarksRef }) {
                 ref={videoRef}
                 className="absolute inset-0 w-full h-full object-cover rounded-xl"
                 style={{
-                    transform: 'scaleX(-1)',  // Mirror the video horizontally
+                    transform: 'scaleX(-1)',
                 }}
                 autoPlay
                 playsInline
@@ -75,7 +72,6 @@ function VideoFeed({ onGestureDetected, onLoadingComplete, landmarksRef }) {
 
             {/* Status Indicator */}
             <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
-                {/* Recording/Active indicator */}
                 <div className={`
           flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium
           ${isHandDetected

@@ -7,6 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [6.0.0] — 2026-02-28
+
+### 🔷 Full TypeScript Migration + Engineering Overhaul
+
+Complete rewrite of the codebase from JavaScript to TypeScript with strict mode. Added centralized configuration, automated testing, error recovery, code splitting, and comprehensive viva documentation.
+
+#### TypeScript Migration
+- ✅ All 13 source files converted from `.js/.jsx` to `.ts/.tsx`
+- ✅ `tsconfig.json` with `strict: true`, `noUnusedLocals`, `noUnusedParameters`
+- ✅ Zero type errors (`tsc --noEmit` passes cleanly)
+- ✅ `src/types/index.ts` — 14 shared interfaces (Landmark, MLPrediction, GestureResult, etc.)
+- ✅ `src/types/mediapipe.d.ts` — CDN global type declarations for `window.Hands` and `window.Camera`
+- ✅ `src/vite-env.d.ts` — Vite client type reference
+- ✅ `GestureLabel` union type via `as const` for compile-time label safety
+
+#### Architecture Cleanup
+- ✅ **Single source of truth**: `src/config/gestureConfig.ts` — all labels, phrases, thresholds, UI mappings
+- ✅ **Dead code removed**: deleted `src/utils/gestureClassifier.js` (legacy rule-based classifier)
+- ✅ **State consolidation**: Unified voice state with `useRef` sync to prevent stale closures
+- ✅ **Module structure**: 4-layer architecture (Config → ML → Hooks → UI) with zero circular dependencies
+
+#### Performance & Resilience
+- ✅ **Code splitting**: TensorFlow.js lazy-loaded via `import()` — initial bundle 21KB
+- ✅ **React.lazy**: TrainingMode component lazy-loaded with Suspense fallback
+- ✅ **CDN resilience**: MediaPipe loaded with 15-second timeout + 2 automatic retries
+- ✅ **ErrorBoundary**: Catches runtime crashes (camera denied, CDN failure, WebGL missing) with retry UI
+- ✅ **Pinch detector fix**: Migrated from pixel coordinates to normalized coordinates (0-1 range)
+
+#### Testing & Evaluation
+- ✅ 32 automated unit tests (`tests/gestureDecisionEngine.test.mjs`)
+  - Stability voting, thumb dominance gating, cooldown enforcement/expiry
+  - Hand disappearance reset, NONE prediction rejection, mixed frame instability
+  - Same gesture deduplication, phrase/gestureType correctness for all 5 classes
+- ✅ Model evaluation script (`scripts/evaluateModel.mjs`)
+  - Synthetic landmark generation, confusion matrix, per-class precision/recall/F1
+
+#### Documentation
+- ✅ `VIVA_PREP.md` — 1020-line viva preparation document
+  - 95 Q&As across 14 sections
+  - Project-specific, ML theory, React/TypeScript, SDLC, DFD, ER diagrams
+  - Data structures & algorithms, OS concepts, networking, security
+  - UML diagrams (use case, class, sequence), board-ready diagrams
+  - Demo script, glossary, numbers to memorize
+
+#### Files Added
+- `src/config/gestureConfig.ts` — centralized configuration
+- `src/types/index.ts` — shared TypeScript interfaces
+- `src/types/mediapipe.d.ts` — CDN global declarations
+- `src/vite-env.d.ts` — Vite type reference
+- `src/components/ErrorBoundary.tsx` — error recovery component
+- `tests/gestureDecisionEngine.test.mjs` — 32 unit tests
+- `scripts/evaluateModel.mjs` — model evaluation with confusion matrix
+- `tsconfig.json` — TypeScript configuration (strict mode)
+- `VIVA_PREP.md` — comprehensive viva preparation document
+
+#### Files Deleted
+- `src/utils/gestureClassifier.js` — dead code (replaced by ML model long ago)
+- All `.js/.jsx` source files (replaced by `.ts/.tsx` equivalents)
+
+#### Files Modified
+- `package.json` — version 6.0.0, added `typecheck` and `evaluate` scripts, added TypeScript devDependency
+- `vite.config.js` — manual chunks for TF.js + React vendor splitting
+- `index.html` — entry point updated to `/src/main.tsx`
+
+---
+
 ## [5.1.0] — 2026-02-16
 
 ### 🎯 Improved Gesture Detection
@@ -22,21 +88,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Changed
 - **Control Button Placement**: Moved voice and personalization toggles to top-right of video feed
-    - Buttons now overlay the video with glassmorphism effect (`backdrop-blur-sm`)
-    - Compact design with responsive labels (hidden on mobile, visible on desktop)
-    - Removed external floating control cluster for cleaner layout
 - **Gesture Legend**: Added gesture options overlay at bottom of video feed
-    - 5-column grid showing all available gestures (✋ ✊ 👍 ☝️ ✌️)
-    - Active gesture highlighted with green glow effect
-    - Glassmorphism styling with semi-transparent backgrounds
-    - Labels hidden on mobile to save space
-- **Better Visual Hierarchy**: Video feed is now the clear focal point with all controls accessible without leaving the viewport
+- **Better Visual Hierarchy**: Video feed is now the clear focal point
 
 #### Technical Details
 - Modified `src/ml/gestureModel.js` — Enhanced `predictGesture()` with finger counting heuristic
 - Modified `src/App.jsx` — Restructured UI with video overlays for controls and gesture legend
-- Integrated seamlessly with v5.0.0's macOS-style UI
-- No breaking changes to existing functionality
 
 ---
 

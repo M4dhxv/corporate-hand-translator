@@ -3,7 +3,7 @@
 > *Translate your hand gestures into peak corporate jargon — powered by AI, running entirely in your browser.*
 
 [![Live Demo](https://img.shields.io/badge/demo-live-brightgreen?style=flat-square)](https://corporate-hand-translator.vercel.app)
-[![Version](https://img.shields.io/badge/version-3.3.0-blue?style=flat-square)](#changelog)
+[![Version](https://img.shields.io/badge/version-6.0.0-blue?style=flat-square)](#changelog)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![TensorFlow.js](https://img.shields.io/badge/TensorFlow.js-v4.17-orange?style=flat-square&logo=tensorflow)](https://www.tensorflow.org/js)
 [![Vercel](https://img.shields.io/badge/deployed%20on-Vercel-black?style=flat-square&logo=vercel)](https://vercel.com)
@@ -12,7 +12,7 @@
 
 ## ✨ What Is This?
 
-A satirical web app that uses **real-time hand tracking** and a **TensorFlow.js neural network** to detect your gestures and translate them into the finest corporate speak. No backend. No API keys. Just pure, client-side machine learning.
+A satirical web app that uses **real-time hand tracking** and a **TensorFlow.js neural network** to detect your gestures and translate them into the finest corporate speak. Built with **TypeScript (strict mode)**, React 18, and Vite 5. No backend. No API keys. Just pure, client-side machine learning.
 
 Show your hand to the camera → AI detects the gesture → You get a corporate power phrase.
 
@@ -93,7 +93,7 @@ Save to IndexedDB → Auto-load on next visit
 
 ### Configuration
 
-Located in `src/ml/gestureDecisionEngine.js`:
+Located in `src/ml/gestureDecisionEngine.ts`:
 
 ```javascript
 STABILITY_FRAMES = 8              // Frames to stabilize (higher = stricter)
@@ -156,11 +156,13 @@ Hand gesture interfaces can feel gimmicky. By pairing the cutting-edge ML with a
 
 | Layer | Technology |
 |-------|-----------|
+| **Language** | TypeScript 5 (strict mode) |
 | **Framework** | React 18 + Vite 5 |
 | **Styling** | Tailwind CSS 3 |
 | **Hand Tracking** | MediaPipe Hands (CDN) |
 | **ML Inference** | TensorFlow.js 4.17 |
 | **Decision Logic** | Gesture Decision Engine (in-browser) |
+| **Testing** | 32 unit tests + model evaluation |
 | **Speech** | Web Speech API (native) |
 | **Hosting** | Vercel (static) |
 
@@ -251,27 +253,39 @@ corporate-hand-translator/
 │       ├── model.json             # Model topology + weights manifest
 │       └── group1-shard1of1.bin   # Model weights
 ├── scripts/
-│   └── trainModel.mjs             # Offline model training script
+│   ├── trainModel.mjs             # Offline model training script
+│   └── evaluateModel.mjs          # Model evaluation (confusion matrix, P/R/F1)
+├── tests/
+│   └── gestureDecisionEngine.test.mjs  # 32 unit tests
 ├── src/
+│   ├── types/
+│   │   ├── index.ts               # 14 shared TypeScript interfaces
+│   │   └── mediapipe.d.ts         # CDN global type declarations
+│   ├── config/
+│   │   └── gestureConfig.ts       # Single source of truth (labels, phrases, thresholds)
 │   ├── ml/
-│   │   ├── gestureModel.js        # Model loader + inference engine
-│   │   ├── localModelManager.js   # IndexedDB model persistence
-│   │   └── gestureTrainer.js      # In-browser training pipeline
+│   │   ├── gestureModel.ts        # Model loader + inference engine
+│   │   ├── gestureDecisionEngine.ts # Stability voting + gating + cooldown
+│   │   ├── localModelManager.ts   # IndexedDB model persistence
+│   │   └── gestureTrainer.ts      # In-browser training pipeline
 │   ├── hooks/
-│   │   └── useHandTracking.js     # MediaPipe + ML integration hook
+│   │   ├── useHandTracking.ts     # MediaPipe + ML integration hook
+│   │   └── usePinchDetector.ts    # Pinch gesture detector
 │   ├── components/
-│   │   ├── VideoFeed.jsx          # Camera feed + canvas overlay
-│   │   ├── PhraseOverlay.jsx      # Gesture phrase display
-│   │   └── TrainingMode.jsx       # Training Mode UI panel
-│   ├── utils/
-│   │   └── gestureClassifier.js   # Legacy rule-based classifier
-│   ├── App.jsx                    # Main application component
-│   ├── index.css                  # Global styles + design system
-│   └── main.jsx                   # Application entry point
+│   │   ├── VideoFeed.tsx          # Camera feed + canvas overlay
+│   │   ├── PhraseOverlay.tsx      # Gesture phrase display
+│   │   ├── TrainingMode.tsx       # Training Mode UI panel
+│   │   └── ErrorBoundary.tsx      # Error recovery component
+│   ├── App.tsx                    # Main application component
+│   ├── main.tsx                   # Entry point with ErrorBoundary
+│   ├── vite-env.d.ts              # Vite type reference
+│   └── index.css                  # Global styles + design system
+├── tsconfig.json                  # TypeScript strict config
 ├── package.json
 ├── vite.config.js
 ├── tailwind.config.js
 ├── vercel.json
+├── VIVA_PREP.md                   # 95 Q&A viva preparation document
 ├── CHANGELOG.md
 └── LICENSE
 ```

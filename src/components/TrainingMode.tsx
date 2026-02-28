@@ -10,25 +10,16 @@ import {
 } from '../ml/gestureTrainer';
 import { saveUserModel, clearUserModel, hasUserModel } from '../ml/localModelManager';
 import { swapModel, resetToDefaultModel, isUsingUserModel } from '../ml/gestureModel';
+import { GESTURE_DISPLAY } from '../config/gestureConfig';
+import type { TrainingModeProps } from '../types';
 
 /**
  * TrainingMode Component
- * 
+ *
  * User-facing UI for personalizing gesture recognition.
  * Allows recording gesture samples, training a model,
  * and managing personalization — all in-browser.
- * 
- * No ML math here — delegates to gestureTrainer.js and localModelManager.js.
  */
-
-/** Emoji + display name for each gesture */
-const GESTURE_INFO = {
-    'OPEN_PALM': { emoji: '✋', name: 'Open Palm' },
-    'CLOSED_FIST': { emoji: '✊', name: 'Closed Fist' },
-    'THUMBS_UP': { emoji: '👍', name: 'Thumbs Up' },
-    'POINTING_UP': { emoji: '☝️', name: 'Pointing Up' },
-    'PEACE_SIGN': { emoji: '✌️', name: 'Peace Sign' }
-};
 
 /** How long to record samples (ms) */
 const RECORD_DURATION = 3000;
@@ -36,17 +27,17 @@ const RECORD_DURATION = 3000;
 /** Interval between frame captures (ms) */
 const CAPTURE_INTERVAL = 100;
 
-function TrainingMode({ landmarksRef, onClose }) {
+function TrainingMode({ landmarksRef, onClose }: TrainingModeProps) {
     const [sampleCounts, setSampleCounts] = useState(getSampleCounts());
-    const [recording, setRecording] = useState(null); // currently recording gesture label
-    const [recordProgress, setRecordProgress] = useState(0); // 0-100
+    const [recording, setRecording] = useState<string | null>(null);
+    const [recordProgress, setRecordProgress] = useState(0);
     const [isTraining, setIsTraining] = useState(false);
     const [trainProgress, setTrainProgress] = useState({ epoch: 0, total: 0 });
-    const [trainStatus, setTrainStatus] = useState(null); // 'success' | 'error' | null
+    const [trainStatus, setTrainStatus] = useState<'success' | 'error' | null>(null);
     const [hasPersonalized, setHasPersonalized] = useState(false);
 
-    const recordTimerRef = useRef(null);
-    const captureIntervalRef = useRef(null);
+    const recordTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const captureIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // Check if user already has a personalized model
     useEffect(() => {
@@ -60,9 +51,8 @@ function TrainingMode({ landmarksRef, onClose }) {
 
     /**
      * Start recording samples for a specific gesture.
-     * Auto-captures landmark frames for RECORD_DURATION ms.
      */
-    const startRecording = useCallback((label) => {
+    const startRecording = useCallback((label: string) => {
         if (recording || isTraining) return;
 
         setRecording(label);
@@ -70,14 +60,12 @@ function TrainingMode({ landmarksRef, onClose }) {
         setTrainStatus(null);
 
         const startTime = Date.now();
-        let framesCollected = 0;
 
         // Capture frames at regular intervals
         captureIntervalRef.current = setInterval(() => {
             const landmarks = landmarksRef.current;
             if (landmarks && landmarks.length === 21) {
-                const added = addSample(landmarks, label);
-                if (added) framesCollected++;
+                addSample(landmarks, label);
             }
 
             // Update progress
@@ -87,7 +75,7 @@ function TrainingMode({ landmarksRef, onClose }) {
 
         // Stop after duration
         recordTimerRef.current = setTimeout(() => {
-            clearInterval(captureIntervalRef.current);
+            if (captureIntervalRef.current) clearInterval(captureIntervalRef.current);
             captureIntervalRef.current = null;
             setRecording(null);
             setRecordProgress(0);
@@ -185,7 +173,7 @@ function TrainingMode({ landmarksRef, onClose }) {
                 {/* Instructions */}
                 <div className="p-4 rounded-lg bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700">
                     <p className="text-sm text-neutral-700 dark:text-neutral-300">
-                        <strong>How to train:</strong> Hold each gesture steady, then click "Record" to collect samples. 
+                        <strong>How to train:</strong> Hold each gesture steady, then click &ldquo;Record&rdquo; to collect samples. 
                         Gather at least <strong>{MIN_SAMPLES_PER_GESTURE} samples</strong> per gesture, then train your model.
                     </p>
                 </div>
@@ -193,7 +181,7 @@ function TrainingMode({ landmarksRef, onClose }) {
                 {/* Gesture recording buttons */}
                 <div className="space-y-2.5">
                     {GESTURE_LABELS.map((label) => {
-                        const info = GESTURE_INFO[label];
+                        const info = GESTURE_DISPLAY[label];
                         const count = sampleCounts[label] || 0;
                         const isRecording = recording === label;
                         const isEnough = count >= MIN_SAMPLES_PER_GESTURE;
@@ -253,7 +241,7 @@ function TrainingMode({ landmarksRef, onClose }) {
                 <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800">
                     <button
                         onClick={handleTrain}
-                        disabled={!allReady || isTraining || recording}
+                        disabled={!allReady || isTraining || recording !== null}
                         className={`
                             w-full py-3 px-6 rounded-lg font-semibold text-sm
                             transition-all duration-300 border
@@ -315,7 +303,7 @@ function TrainingMode({ landmarksRef, onClose }) {
                     <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800">
                         <button
                             onClick={handleReset}
-                            disabled={isTraining || recording}
+                            disabled={isTraining || recording !== null}
                             className="w-full py-2.5 px-4 rounded-lg text-sm font-medium
                                 text-neutral-700 dark:text-neutral-300
                                 bg-neutral-100 dark:bg-neutral-800/50

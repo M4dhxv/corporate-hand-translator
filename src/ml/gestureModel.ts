@@ -1,69 +1,38 @@
 /**
- * gestureModel.js — Browser-side ML Gesture Classifier
- * 
+ * gestureModel.ts — Browser-side ML Gesture Classifier
+ *
  * Loads a TensorFlow.js gesture model and runs inference on
  * MediaPipe hand landmarks entirely client-side.
- * 
+ *
  * Model loading priority:
  * 1. User-trained model from IndexedDB (personalized)
  * 2. Default pre-trained model from /model/ (static asset)
- * 
+ *
  * Why browser ML?
  * - Zero server costs — runs on user's device
  * - No API keys or backend required
  * - Works on Vercel static hosting (model files served as static assets)
  * - Privacy-first: landmarks never leave the browser
- * 
- * Why this is Vercel-safe:
- * - Model files live in public/model/ and are served as static assets
- * - TensorFlow.js runs entirely in the browser via WebGL/WASM
- * - No Node.js APIs are used at runtime
  */
 
 import * as tf from '@tensorflow/tfjs';
 import { loadUserModel } from './localModelManager';
-
-// ──────────────────────────────────────────────
-// Constants
-// ──────────────────────────────────────────────
-
-/** Gesture class labels — order matches model output indices */
-const GESTURE_LABELS = [
-    'OPEN_PALM',
-    'CLOSED_FIST',
-    'THUMBS_UP',
-    'POINTING_UP',
-    'PEACE_SIGN'
-];
-
-/** Map ML labels to corporate phrases */
-const LABEL_TO_PHRASE = {
-    'OPEN_PALM': "Let's put a pin in that for now.",
-    'CLOSED_FIST': "We need to circle back to the core deliverables.",
-    'THUMBS_UP': "I am fully aligned with this initiative.",
-    'POINTING_UP': "Let's take this offline.",
-    'PEACE_SIGN': "We have verified the cross-functional synergy."
-};
-
-/** Map ML labels to UI gesture types (matching existing UI) */
-const LABEL_TO_GESTURE_TYPE = {
-    'OPEN_PALM': 'open-palm',
-    'CLOSED_FIST': 'fist',
-    'THUMBS_UP': 'thumbs-up',
-    'POINTING_UP': 'pointing',
-    'PEACE_SIGN': 'peace'
-};
-
-/** Minimum confidence to accept a prediction */
-const CONFIDENCE_THRESHOLD = 0.60;
+import {
+    GESTURE_LABELS,
+    LABEL_TO_PHRASE,
+    LABEL_TO_GESTURE_TYPE,
+    CONFIDENCE_THRESHOLD,
+    INPUT_FEATURES
+} from '../config/gestureConfig';
+import type { Landmark, MLPrediction } from '../types';
 
 // ──────────────────────────────────────────────
 // Module-scoped model cache (loaded once)
 // ──────────────────────────────────────────────
 
-let cachedModel = null;
+let cachedModel: tf.LayersModel | null = null;
 let isLoading = false;
-let loadPromise = null;
+let loadPromise: Promise<tf.LayersModel> | null = null;
 let isUserModel = false;
 
 // ──────────────────────────────────────────────
@@ -72,16 +41,14 @@ let isUserModel = false;
 
 /**
  * Load the gesture classification model.
- * 
+ *
  * Priority:
  * 1. User-trained model from IndexedDB (if exists)
  * 2. Default model from /model/model.json (static asset)
- * 
+ *
  * Model is cached — subsequent calls return immediately.
- * 
- * @returns {Promise<tf.LayersModel>} The loaded model
  */
-export async function loadGestureModel() {
+export async function loadGestureModel(): Promise<tf.LayersModel> {
     if (cachedModel) return cachedModel;
 
     // Prevent concurrent loads
@@ -105,7 +72,7 @@ export async function loadGestureModel() {
 
             // Warm up the model with a dummy prediction to initialize WebGL
             const dummy = tf.zeros([1, 63]);
-            const warmup = cachedModel.predict(dummy);
+            const warmup = cachedModel.predict(dummy) as tf.Tensor;
             warmup.dispose();
             dummy.dispose();
 
@@ -126,10 +93,8 @@ export async function loadGestureModel() {
  * Hot-swap the active model with a newly trained one.
  * Used after in-browser training to apply the new model
  * immediately without a page reload.
- * 
- * @param {tf.LayersModel} newModel - The freshly trained model
  */
-export function swapModel(newModel) {
+export function swapModel(newModel: tf.LayersModel): void {
     if (cachedModel && cachedModel !== newModel) {
         cachedModel.dispose();
     }
@@ -141,10 +106,8 @@ export function swapModel(newModel) {
 /**
  * Reset to the default model from /model/model.json.
  * Used after clearing personalization.
- * 
- * @returns {Promise<tf.LayersModel>}
  */
-export async function resetToDefaultModel() {
+export async function resetToDefaultModel(): Promise<tf.LayersModel> {
     if (cachedModel) {
         cachedModel.dispose();
         cachedModel = null;
@@ -159,7 +122,7 @@ export async function resetToDefaultModel() {
 
     // Warm up
     const dummy = tf.zeros([1, 63]);
-    const warmup = cachedModel.predict(dummy);
+    const warmup = cachedModel.predict(dummy) as tf.Tensor;
     warmup.dispose();
     dummy.dispose();
 
@@ -168,26 +131,22 @@ export async function resetToDefaultModel() {
 
 /**
  * Check if the currently active model is user-trained.
- * @returns {boolean}
  */
-export function isUsingUserModel() {
+export function isUsingUserModel(): boolean {
     return isUserModel;
 }
 
 /**
  * Preprocess MediaPipe landmarks into a tensor suitable for inference.
- * 
+ *
  * Steps:
  * 1. Flatten 21 landmarks (x, y, z) into 63 values
  * 2. Normalize relative to wrist position (landmark 0)
  * 3. Return as [1, 63] tensor2d
- * 
- * @param {Array<{x: number, y: number, z: number}>} landmarks - 21 MediaPipe landmarks
- * @returns {tf.Tensor2D} Shape [1, 63] tensor
  */
-export function preprocessLandmarks(landmarks) {
+export function preprocessLandmarks(landmarks: Landmark[]): tf.Tensor2D {
     const wrist = landmarks[0];
-    const values = [];
+    const values: number[] = [];
 
     for (const lm of landmarks) {
         values.push(lm.x - wrist.x);
@@ -195,22 +154,19 @@ export function preprocessLandmarks(landmarks) {
         values.push(lm.z - wrist.z);
     }
 
-    return tf.tensor2d([values], [1, 63]);
+    return tf.tensor2d([values], [1, INPUT_FEATURES]);
 }
 
 /**
  * Run gesture prediction on MediaPipe hand landmarks.
- * 
+ *
  * Handles full pipeline: preprocess → infer → postprocess.
  * All intermediate tensors are properly disposed to prevent memory leaks.
- * 
+ *
  * Returns full probability distribution (for decision engine tie-breaking)
  * and top prediction for backward compatibility.
- * 
- * @param {Array<{x: number, y: number, z: number}>} landmarks - 21 MediaPipe landmarks
- * @returns {{ gestureType: string|null, phrase: string, label: string, confidence: number, probabilities: object }}
  */
-export function predictGesture(landmarks) {
+export function predictGesture(landmarks: Landmark[]): MLPrediction {
     if (!cachedModel || !landmarks || landmarks.length !== 21) {
         return {
             gestureType: null,
@@ -224,7 +180,7 @@ export function predictGesture(landmarks) {
     // Use tf.tidy to automatically dispose all intermediate tensors
     const result = tf.tidy(() => {
         const input = preprocessLandmarks(landmarks);
-        const prediction = cachedModel.predict(input);
+        const prediction = cachedModel!.predict(input) as tf.Tensor;
 
         // Get class probabilities
         const probabilities = prediction.dataSync(); // Float32Array
@@ -240,7 +196,7 @@ export function predictGesture(landmarks) {
         }
 
         // Build probability distribution map for decision engine
-        const probMap = {};
+        const probMap: Record<string, number> = {};
         for (let i = 0; i < GESTURE_LABELS.length; i++) {
             probMap[GESTURE_LABELS[i]] = probabilities[i];
         }
@@ -263,36 +219,6 @@ export function predictGesture(landmarks) {
 
     const label = GESTURE_LABELS[maxIdx];
 
-    // Additional heuristic: Distinguish OPEN_PALM from POINTING_UP
-    // If both have similar confidence, check finger extension count
-    if (label === 'POINTING_UP') {
-        const openPalmIdx = GESTURE_LABELS.indexOf('OPEN_PALM');
-        const openPalmConf = probMap['OPEN_PALM'];
-
-        // If open palm confidence is close to pointing confidence, prefer open palm
-        // This helps when all fingers are extended but model is confused
-        if (openPalmConf > 0.4 && Math.abs(maxConf - openPalmConf) < 0.15) {
-            // Count extended fingers using simple heuristic
-            const indexExtended = landmarks[8].y < landmarks[6].y;
-            const middleExtended = landmarks[12].y < landmarks[10].y;
-            const ringExtended = landmarks[16].y < landmarks[14].y;
-            const pinkyExtended = landmarks[20].y < landmarks[18].y;
-
-            const extendedCount = [indexExtended, middleExtended, ringExtended, pinkyExtended].filter(Boolean).length;
-
-            // If 3 or more fingers extended, it's likely open palm
-            if (extendedCount >= 3) {
-                return {
-                    gestureType: LABEL_TO_GESTURE_TYPE['OPEN_PALM'],
-                    phrase: LABEL_TO_PHRASE['OPEN_PALM'],
-                    label: 'OPEN_PALM',
-                    confidence: openPalmConf,
-                    probabilities: probMap
-                };
-            }
-        }
-    }
-
     return {
         gestureType: LABEL_TO_GESTURE_TYPE[label],
         phrase: LABEL_TO_PHRASE[label],
@@ -304,8 +230,7 @@ export function predictGesture(landmarks) {
 
 /**
  * Check if the model is loaded and ready for inference.
- * @returns {boolean}
  */
-export function isModelReady() {
+export function isModelReady(): boolean {
     return cachedModel !== null;
 }

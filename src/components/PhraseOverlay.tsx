@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
+import { GESTURE_TYPE_TO_EMOJI } from '../config/gestureConfig';
+import type { PhraseOverlayProps } from '../types';
 
 /**
  * PhraseOverlay Component
  * Displays detected gesture phrase in a high-contrast overlay bubble.
  * Smooth fade-in/out animation on phrase changes.
  */
-function PhraseOverlay({ phrase, gestureType }) {
+function PhraseOverlay({ phrase, gestureType }: PhraseOverlayProps) {
     const [displayPhrase, setDisplayPhrase] = useState(phrase);
     const [isAnimating, setIsAnimating] = useState(false);
 
@@ -37,11 +39,7 @@ function PhraseOverlay({ phrase, gestureType }) {
                 {isActiveGesture && (
                     <div className="mb-2 flex items-center justify-center gap-2">
                         <span className="text-lg">
-                            {gestureType === 'open-palm' && '✋'}
-                            {gestureType === 'fist' && '✊'}
-                            {gestureType === 'thumbs-up' && '👍'}
-                            {gestureType === 'pointing' && '☝️'}
-                            {gestureType === 'peace' && '✌️'}
+                            {GESTURE_TYPE_TO_EMOJI[gestureType] || '🤚'}
                         </span>
                         <span className="text-xs text-green-400 uppercase tracking-wider font-medium">
                             {gestureType.replace('-', ' ')}
@@ -50,7 +48,7 @@ function PhraseOverlay({ phrase, gestureType }) {
                 )}
 
                 <p className="text-white font-medium leading-relaxed text-base">
-                    "{displayPhrase}"
+                    &ldquo;{displayPhrase}&rdquo;
                 </p>
             </div>
         </div>

@@ -1,7 +1,10 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, lazy, Suspense } from 'react';
 import VideoFeed from './components/VideoFeed';
 import PhraseOverlay from './components/PhraseOverlay';
-import TrainingMode from './components/TrainingMode';
+import type { Landmark, GestureDetection } from './types';
+
+// Lazy-load TrainingMode — this keeps TF.js (~1.6MB) out of the initial bundle.
+const TrainingMode = lazy(() => import('./components/TrainingMode'));
 
 /**
  * Corporate Signal Translator - Main App
@@ -11,12 +14,11 @@ import TrainingMode from './components/TrainingMode';
 function App() {
     // State management
     const [currentPhrase, setCurrentPhrase] = useState('Waiting for input…');
-    const [gestureType, setGestureType] = useState(null);
-    const [gestureConfidence, setGestureConfidence] = useState(0);
+    const [gestureType, setGestureType] = useState<string | null>(null);
+    const [gestureConfidence] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [voiceEnabled, setVoiceEnabled] = useState(true);
-    const [ttsEnabled, setTtsEnabled] = useState(true);
-    const [voices, setVoices] = useState([]);
+    const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
     const [trainingMode, setTrainingMode] = useState(false);
     const [darkMode, setDarkMode] = useState(() => {
         if (typeof window !== 'undefined') {
@@ -29,9 +31,8 @@ function App() {
 
     // Refs
     const lastSpokenRef = useRef('');
-    const ttsEnabledRef = useRef(ttsEnabled);
     const lastGestureTimeRef = useRef(0);
-    const landmarksRef = useRef(null);
+    const landmarksRef = useRef<Landmark[] | null>(null);
     const voiceEnabledRef = useRef(voiceEnabled);
 
     // Persist theme preference
@@ -43,28 +44,12 @@ function App() {
     // Keep voice state ref in sync
     useEffect(() => {
         voiceEnabledRef.current = voiceEnabled;
+        if (!voiceEnabled) {
+            window.speechSynthesis.cancel();
+        }
     }, [voiceEnabled]);
 
-    // TTS logic (unchanged from v3.1.2+)
-    useEffect(() => {
-        ttsEnabledRef.current = ttsEnabled;
-        if (!ttsEnabled) {
-            window.speechSynthesis.cancel();
-        } else {
-            try {
-                const silentUtterance = new SpeechSynthesisUtterance('');
-                silentUtterance.volume = 0;
-                const speakPromise = window.speechSynthesis.speak(silentUtterance);
-                if (speakPromise && speakPromise.catch) {
-                    speakPromise.catch(() => { });
-                }
-            } catch (err) {
-                console.debug('TTS priming failed:', err.message);
-            }
-        }
-    }, [ttsEnabled]);
-
-    // Voice loading (unchanged from v3.1.2+)
+    // Voice loading
     useEffect(() => {
         const loadVoices = () => {
             const availableVoices = window.speechSynthesis.getVoices();
@@ -85,9 +70,9 @@ function App() {
         };
     }, []);
 
-    // Speak phrase (unchanged from v3.1.2+)
-    const speakPhrase = useCallback((text) => {
-        if (!voiceEnabledRef.current || !ttsEnabledRef.current || !text || text === 'Waiting for input…') return;
+    // Speak phrase
+    const speakPhrase = useCallback((text: string) => {
+        if (!voiceEnabledRef.current || !text || text === 'Waiting for input…') return;
         if (text === lastSpokenRef.current) return;
 
         window.speechSynthesis.cancel();
@@ -115,12 +100,12 @@ function App() {
         lastSpokenRef.current = text;
     }, [voices]);
 
-    // Gesture detection (unchanged from v3.2.0)
-    const handleGestureDetected = ({ phrase, gestureType }) => {
+    // Gesture detection
+    const handleGestureDetected = ({ phrase, gestureType: gType }: GestureDetection) => {
         setCurrentPhrase(phrase);
-        setGestureType(gestureType);
+        setGestureType(gType);
 
-        if (gestureType) {
+        if (gType) {
             const now = Date.now();
             if (now - lastGestureTimeRef.current > 500) {
                 speakPhrase(phrase);
@@ -137,7 +122,7 @@ function App() {
         <div className={`${darkMode ? 'dark' : ''}`}>
             {/* Root container - fixed viewport utility layout */}
             <div className="h-screen w-screen bg-white dark:bg-neutral-950 transition-colors duration-300 flex flex-col overflow-hidden">
-
+                
                 {/* Minimalist header */}
                 <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-neutral-200/50 dark:border-neutral-800/50 flex-shrink-0">
                     <div className="min-w-0">
@@ -164,13 +149,13 @@ function App() {
 
                 {/* Main content area - centered video card with controls */}
                 <main className="flex-1 flex items-center justify-center px-4 sm:px-6 overflow-hidden relative">
-
+                    
                     {/* Fixed video card - the product */}
                     <div className="relative w-full max-w-3xl">
-
+                        
                         {/* Video container with rounded corners */}
                         <div className="rounded-3xl overflow-hidden shadow-2xl border border-neutral-200/50 dark:border-neutral-800/50 bg-black">
-
+                            
                             {/* Loading state */}
                             {isLoading && (
                                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
@@ -198,11 +183,12 @@ function App() {
                             <div className="px-4 py-3 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-sm border-t border-neutral-200/50 dark:border-neutral-800/50">
                                 <div className="flex items-center justify-between gap-3 text-xs">
                                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                                        <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 transition-all ${gestureType ? 'bg-green-500 animate-pulse' : 'bg-neutral-300 dark:bg-neutral-600'
-                                            }`} />
+                                        <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 transition-all ${
+                                            gestureType ? 'bg-green-500 animate-pulse' : 'bg-neutral-300 dark:bg-neutral-600'
+                                        }`} />
                                         <div className="min-w-0">
                                             <p className="text-neutral-500 dark:text-neutral-400 leading-tight">
-                                                {gestureType
+                                                {gestureType 
                                                     ? gestureType.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
                                                     : 'Waiting…'
                                                 }
@@ -218,64 +204,52 @@ function App() {
                             </div>
                         </div>
 
-                        {/* Control buttons - top-right of video feed */}
-                        <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
-                            {/* Voice toggle */}
+                        {/* Floating control cluster - bottom-right of video card */}
+                        <div className="absolute -bottom-20 -right-20 w-40 space-y-2">
+                            
+                            {/* Voice state indicator */}
                             <button
                                 onClick={() => setVoiceEnabled(!voiceEnabled)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all
-                                    bg-white/90 dark:bg-neutral-900/90 border border-neutral-200/50 dark:border-neutral-800/50
-                                    hover:bg-white dark:hover:bg-neutral-900
-                                    shadow-lg backdrop-blur-sm"
-                                title={voiceEnabled ? 'Voice On' : 'Voice Off'}
+                                className="w-full px-3 py-2.5 rounded-xl text-xs font-medium transition-all
+                                    bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800
+                                    hover:bg-neutral-50 dark:hover:bg-neutral-800/50
+                                    shadow-lg dark:shadow-2xl backdrop-blur-sm"
                             >
-                                <span>{voiceEnabled ? '🔊' : '🔇'}</span>
-                                <span className="text-neutral-700 dark:text-neutral-300 hidden sm:inline">
-                                    {voiceEnabled ? 'Voice' : 'Muted'}
-                                </span>
+                                <div className="flex items-center justify-between gap-2">
+                                    <span>{voiceEnabled ? '🔊' : '🔇'}</span>
+                                    <span className="text-neutral-700 dark:text-neutral-300">
+                                        {voiceEnabled ? 'Voice On' : 'Voice Off'}
+                                    </span>
+                                </div>
                             </button>
 
-                            {/* Personalize button */}
+                            {/* Personalize gestures */}
                             <button
                                 onClick={() => setTrainingMode(true)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all
-                                    bg-white/90 dark:bg-neutral-900/90 border border-neutral-200/50 dark:border-neutral-800/50
-                                    hover:bg-white dark:hover:bg-neutral-900
-                                    shadow-lg backdrop-blur-sm
+                                className="w-full px-3 py-2.5 rounded-xl text-xs font-medium transition-all
+                                    bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800
+                                    hover:bg-neutral-50 dark:hover:bg-neutral-800/50
+                                    shadow-lg dark:shadow-2xl backdrop-blur-sm
                                     text-neutral-700 dark:text-neutral-300"
-                                title="Personalize Gestures"
                             >
-                                <span>✏️</span>
-                                <span className="hidden sm:inline">Personalize</span>
+                                ✏️ Personalize
                             </button>
-                        </div>
 
-                        {/* Gesture legend - bottom of video feed */}
-                        <div className="absolute bottom-3 left-3 right-3 z-20">
-                            <div className="grid grid-cols-5 gap-2 text-center">
-                                {[
-                                    { gesture: '✋', label: 'Open Palm', key: 'open-palm' },
-                                    { gesture: '✊', label: 'Fist', key: 'fist' },
-                                    { gesture: '👍', label: 'Thumbs Up', key: 'thumbs-up' },
-                                    { gesture: '☝️', label: 'Pointing', key: 'pointing' },
-                                    { gesture: '✌️', label: 'Peace', key: 'peace' },
-                                ].map((item) => (
-                                    <div
-                                        key={item.key}
-                                        className={`
-                                            p-2 rounded-lg backdrop-blur-sm transition-all duration-300
-                                            ${gestureType === item.key
-                                                ? 'bg-green-500/30 border border-green-400/50 scale-105'
-                                                : 'bg-white/40 dark:bg-neutral-900/40 border border-neutral-200/30 dark:border-neutral-800/30 hover:bg-white/60 dark:hover:bg-neutral-900/60'}
-                                        `}
-                                    >
-                                        <span className="text-xl sm:text-2xl">{item.gesture}</span>
-                                        <p className="text-[10px] sm:text-xs mt-0.5 text-neutral-700 dark:text-neutral-300 hidden sm:block">
-                                            {item.label}
-                                        </p>
-                                    </div>
-                                ))}
-                            </div>
+                            {/* Reset / Recalibrate */}
+                            <button
+                                onClick={() => {
+                                    if (confirm('Reset hand tracking to default settings?')) {
+                                        window.location.reload();
+                                    }
+                                }}
+                                className="w-full px-3 py-2.5 rounded-xl text-xs font-medium transition-all
+                                    bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800
+                                    hover:bg-neutral-50 dark:hover:bg-neutral-800/50
+                                    shadow-lg dark:shadow-2xl backdrop-blur-sm
+                                    text-neutral-700 dark:text-neutral-300"
+                            >
+                                ⟲ Reset
+                            </button>
                         </div>
                     </div>
                 </main>
@@ -286,14 +260,23 @@ function App() {
                 </footer>
             </div>
 
-            {/* Training mode modal overlay */}
+            {/* Training mode modal overlay — lazy-loaded with Suspense */}
             {trainingMode && (
                 <div className="fixed inset-0 z-50 bg-black/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="relative w-full max-w-2xl max-h-[90vh] rounded-3xl overflow-hidden bg-white dark:bg-neutral-900 shadow-2xl border border-neutral-200/50 dark:border-neutral-800/50">
-                        <TrainingMode
-                            landmarksRef={landmarksRef}
-                            onClose={() => setTrainingMode(false)}
-                        />
+                        <Suspense fallback={
+                            <div className="flex items-center justify-center p-12">
+                                <div className="text-center">
+                                    <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                                    <p className="text-xs text-neutral-500 dark:text-neutral-400">Loading trainer…</p>
+                                </div>
+                            </div>
+                        }>
+                            <TrainingMode
+                                landmarksRef={landmarksRef}
+                                onClose={() => setTrainingMode(false)}
+                            />
+                        </Suspense>
                     </div>
                 </div>
             )}

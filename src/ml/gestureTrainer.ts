@@ -1,29 +1,25 @@
 /**
- * gestureTrainer.js — In-Browser Gesture Training
- * 
+ * gestureTrainer.ts — In-Browser Gesture Training
+ *
  * Collects landmark samples from the camera, normalizes them,
  * and trains a lightweight TensorFlow.js classifier entirely
  * in the browser. No data leaves the device.
- * 
+ *
  * Architecture: Dense(128, relu) → Dropout(0.3) → Dense(64, relu) → Dense(5, softmax)
  * Input:  [1, 63] — 21 landmarks × 3 coordinates (normalized to wrist)
  * Output: [1, 5]  — probability per gesture class
  */
 
 import * as tf from '@tensorflow/tfjs';
+import { GESTURE_LABELS, NUM_CLASSES, INPUT_FEATURES } from '../config/gestureConfig';
+import type { Landmark, TrainProgressCallback } from '../types';
+
+// Re-export for consumers that imported from here previously
+export { GESTURE_LABELS };
 
 // ──────────────────────────────────────────────
 // Constants
 // ──────────────────────────────────────────────
-
-/** Gesture classes — order must match model output indices */
-export const GESTURE_LABELS = [
-    'OPEN_PALM',
-    'CLOSED_FIST',
-    'THUMBS_UP',
-    'POINTING_UP',
-    'PEACE_SIGN'
-];
 
 /** Minimum samples per gesture before training is allowed */
 export const MIN_SAMPLES_PER_GESTURE = 10;
@@ -41,7 +37,7 @@ const LEARNING_RATE = 0.001;
  * Dataset: Map<string, Float32Array[]>
  * Key = gesture label, Value = array of feature vectors (63 floats each)
  */
-let dataset = new Map();
+let dataset = new Map<string, Float32Array[]>();
 resetDataset();
 
 // ──────────────────────────────────────────────
@@ -51,8 +47,8 @@ resetDataset();
 /**
  * Initialize/reset the dataset with empty arrays for each gesture.
  */
-function resetDataset() {
-    dataset = new Map();
+function resetDataset(): void {
+    dataset = new Map<string, Float32Array[]>();
     for (const label of GESTURE_LABELS) {
         dataset.set(label, []);
     }
@@ -61,13 +57,8 @@ function resetDataset() {
 /**
  * Normalize 21 MediaPipe landmarks into a 63-element Float32Array.
  * Coordinates are made relative to the wrist (landmark 0).
- * 
- * This matches the preprocessing in gestureModel.js.
- * 
- * @param {Array<{x: number, y: number, z: number}>} landmarks
- * @returns {Float32Array}
  */
-function normalizeLandmarks(landmarks) {
+function normalizeLandmarks(landmarks: Landmark[]): Float32Array {
     const wrist = landmarks[0];
     const values = new Float32Array(63);
     let idx = 0;
@@ -83,55 +74,44 @@ function normalizeLandmarks(landmarks) {
 
 /**
  * Add a single landmark sample to the dataset.
- * 
- * @param {Array<{x: number, y: number, z: number}>} landmarks - 21 MediaPipe landmarks
- * @param {string} label - One of GESTURE_LABELS
- * @returns {boolean} True if sample was added successfully
  */
-export function addSample(landmarks, label) {
+export function addSample(landmarks: Landmark[], label: string): boolean {
     if (!landmarks || landmarks.length !== 21) return false;
-    if (!GESTURE_LABELS.includes(label)) return false;
+    if (!(GESTURE_LABELS as readonly string[]).includes(label)) return false;
 
     const features = normalizeLandmarks(landmarks);
-    dataset.get(label).push(features);
+    dataset.get(label)!.push(features);
     return true;
 }
 
 /**
  * Get the number of collected samples per gesture.
- * 
- * @returns {Object<string, number>} e.g. { OPEN_PALM: 30, CLOSED_FIST: 25, ... }
  */
-export function getSampleCounts() {
-    const counts = {};
+export function getSampleCounts(): Record<string, number> {
+    const counts: Record<string, number> = {};
     for (const label of GESTURE_LABELS) {
-        counts[label] = dataset.get(label).length;
+        counts[label] = dataset.get(label)!.length;
     }
     return counts;
 }
 
 /**
  * Get total number of samples across all gestures.
- * 
- * @returns {number}
  */
-export function getTotalSamples() {
+export function getTotalSamples(): number {
     let total = 0;
     for (const label of GESTURE_LABELS) {
-        total += dataset.get(label).length;
+        total += dataset.get(label)!.length;
     }
     return total;
 }
 
 /**
  * Check if we have enough samples to train.
- * Requires at least MIN_SAMPLES_PER_GESTURE per gesture class.
- * 
- * @returns {boolean}
  */
-export function canTrain() {
+export function canTrain(): boolean {
     for (const label of GESTURE_LABELS) {
-        if (dataset.get(label).length < MIN_SAMPLES_PER_GESTURE) return false;
+        if (dataset.get(label)!.length < MIN_SAMPLES_PER_GESTURE) return false;
     }
     return true;
 }
@@ -139,7 +119,7 @@ export function canTrain() {
 /**
  * Clear all collected samples.
  */
-export function clearDataset() {
+export function clearDataset(): void {
     resetDataset();
 }
 
@@ -149,12 +129,8 @@ export function clearDataset() {
 
 /**
  * Build and train a gesture classification model using collected samples.
- * 
- * @param {function(number, number): void} onProgress - Called each epoch: (currentEpoch, totalEpochs)
- * @returns {Promise<tf.LayersModel>} The trained model
- * @throws {Error} If insufficient samples
  */
-export async function trainModel(onProgress) {
+export async function trainModel(onProgress?: TrainProgressCallback): Promise<tf.LayersModel> {
     if (!canTrain()) {
         throw new Error(
             `Need at least ${MIN_SAMPLES_PER_GESTURE} samples per gesture. ` +
@@ -163,17 +139,17 @@ export async function trainModel(onProgress) {
     }
 
     // ── Prepare training data ──
-    const allFeatures = [];
-    const allLabels = [];
+    const allFeatures: number[][] = [];
+    const allLabels: number[][] = [];
 
     for (let i = 0; i < GESTURE_LABELS.length; i++) {
         const label = GESTURE_LABELS[i];
-        const samples = dataset.get(label);
+        const samples = dataset.get(label)!;
 
         for (const features of samples) {
             allFeatures.push(Array.from(features));
             // One-hot encode the label
-            const oneHot = new Array(GESTURE_LABELS.length).fill(0);
+            const oneHot = new Array<number>(GESTURE_LABELS.length).fill(0);
             oneHot[i] = 1;
             allLabels.push(oneHot);
         }
@@ -194,7 +170,7 @@ export async function trainModel(onProgress) {
     const model = tf.sequential();
 
     model.add(tf.layers.dense({
-        inputShape: [63],
+        inputShape: [INPUT_FEATURES],
         units: 128,
         activation: 'relu'
     }));
@@ -207,7 +183,7 @@ export async function trainModel(onProgress) {
     }));
 
     model.add(tf.layers.dense({
-        units: GESTURE_LABELS.length,
+        units: NUM_CLASSES,
         activation: 'softmax'
     }));
 
