@@ -14,9 +14,11 @@
  * Run: node scripts/evaluateModel.mjs
  */
 
+
 import * as tf from '@tensorflow/tfjs-node';
-import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import { readFileSync } from 'fs';
+console.log('✅ Using @tensorflow/tfjs-node backend for evaluation');
 
 // ──────────────────────────────────────────────
 // Config
@@ -27,7 +29,12 @@ const GESTURE_LABELS = [
     'CLOSED_FIST',
     'THUMBS_UP',
     'POINTING_UP',
-    'PEACE_SIGN'
+    'PEACE_SIGN',
+    'OK_SIGN',
+    'CALL_ME',
+    'ROCK_SIGN',
+    'THREE_FINGERS',
+    'FOUR_FINGERS'
 ];
 
 const MODEL_PATH = `file://${resolve('public/model/model.json')}`;
@@ -175,12 +182,123 @@ function generatePeaceSign() {
     return addNoise(lm);
 }
 
+/**
+ * Generate synthetic OK_SIGN landmarks.
+ * Thumb + index touching, middle/ring/pinky extended.
+ */
+function generateOkSign() {
+    const lm = generateOpenPalm();
+    // Bring thumb + index tip together
+    lm[8] = { x: -0.12, y: -0.14, z: 0 };
+    lm[7] = { x: -0.10, y: -0.15, z: 0 };
+    lm[6] = { x: -0.09, y: -0.13, z: 0 };
+    lm[4] = { x: -0.12, y: -0.14, z: 0 };
+    lm[3] = { x: -0.10, y: -0.12, z: 0 };
+    return addNoise(lm);
+}
+
+/**
+ * Generate synthetic CALL_ME landmarks.
+ * Thumb + pinky extended, others curled.
+ */
+function generateCallMe() {
+    const lm = generateClosedFist();
+    // Thumb extended out
+    lm[1] = { x: -0.07, y: -0.06, z: 0 };
+    lm[2] = { x: -0.14, y: -0.10, z: 0 };
+    lm[3] = { x: -0.20, y: -0.12, z: 0 };
+    lm[4] = { x: -0.26, y: -0.14, z: 0 };
+    // Pinky extended
+    lm[17] = { x: 0.08, y: -0.09, z: 0 };
+    lm[18] = { x: 0.10, y: -0.16, z: 0 };
+    lm[19] = { x: 0.12, y: -0.22, z: 0 };
+    lm[20] = { x: 0.14, y: -0.28, z: 0 };
+    return addNoise(lm);
+}
+
+/**
+ * Generate synthetic ROCK_SIGN landmarks.
+ * Index + pinky extended, middle/ring curled.
+ */
+function generateRockSign() {
+    const lm = generateClosedFist();
+    // Index extended
+    lm[5] = { x: -0.04, y: -0.10, z: 0 };
+    lm[6] = { x: -0.05, y: -0.18, z: 0 };
+    lm[7] = { x: -0.05, y: -0.25, z: 0 };
+    lm[8] = { x: -0.05, y: -0.32, z: 0 };
+    // Pinky extended
+    lm[17] = { x: 0.08, y: -0.09, z: 0 };
+    lm[18] = { x: 0.10, y: -0.16, z: 0 };
+    lm[19] = { x: 0.12, y: -0.22, z: 0 };
+    lm[20] = { x: 0.14, y: -0.28, z: 0 };
+    return addNoise(lm);
+}
+
+/**
+ * Generate synthetic THREE_FINGERS landmarks.
+ * Index + middle + ring extended, thumb+pinky curled.
+ */
+function generateThreeFingers() {
+    const lm = generateClosedFist();
+    // Index
+    lm[5] = { x: -0.04, y: -0.10, z: 0 };
+    lm[6] = { x: -0.05, y: -0.18, z: 0 };
+    lm[7] = { x: -0.05, y: -0.25, z: 0 };
+    lm[8] = { x: -0.05, y: -0.32, z: 0 };
+    // Middle
+    lm[9] = { x: 0.0, y: -0.10, z: 0 };
+    lm[10] = { x: 0.0, y: -0.19, z: 0 };
+    lm[11] = { x: 0.0, y: -0.26, z: 0 };
+    lm[12] = { x: 0.0, y: -0.33, z: 0 };
+    // Ring
+    lm[13] = { x: 0.04, y: -0.10, z: 0 };
+    lm[14] = { x: 0.05, y: -0.18, z: 0 };
+    lm[15] = { x: 0.05, y: -0.24, z: 0 };
+    lm[16] = { x: 0.05, y: -0.30, z: 0 };
+    return addNoise(lm);
+}
+
+/**
+ * Generate synthetic FOUR_FINGERS landmarks.
+ * Index + middle + ring + pinky extended, thumb curled.
+ */
+function generateFourFingers() {
+    const lm = generateClosedFist();
+    // Index
+    lm[5] = { x: -0.04, y: -0.10, z: 0 };
+    lm[6] = { x: -0.05, y: -0.18, z: 0 };
+    lm[7] = { x: -0.05, y: -0.25, z: 0 };
+    lm[8] = { x: -0.05, y: -0.32, z: 0 };
+    // Middle
+    lm[9] = { x: 0.0, y: -0.10, z: 0 };
+    lm[10] = { x: 0.0, y: -0.19, z: 0 };
+    lm[11] = { x: 0.0, y: -0.26, z: 0 };
+    lm[12] = { x: 0.0, y: -0.33, z: 0 };
+    // Ring
+    lm[13] = { x: 0.04, y: -0.10, z: 0 };
+    lm[14] = { x: 0.05, y: -0.18, z: 0 };
+    lm[15] = { x: 0.05, y: -0.24, z: 0 };
+    lm[16] = { x: 0.05, y: -0.30, z: 0 };
+    // Pinky
+    lm[17] = { x: 0.08, y: -0.09, z: 0 };
+    lm[18] = { x: 0.10, y: -0.15, z: 0 };
+    lm[19] = { x: 0.11, y: -0.20, z: 0 };
+    lm[20] = { x: 0.12, y: -0.25, z: 0 };
+    return addNoise(lm);
+}
+
 const GENERATORS = {
     'OPEN_PALM': generateOpenPalm,
     'CLOSED_FIST': generateClosedFist,
     'THUMBS_UP': generateThumbsUp,
     'POINTING_UP': generatePointingUp,
-    'PEACE_SIGN': generatePeaceSign
+    'PEACE_SIGN': generatePeaceSign,
+    'OK_SIGN': generateOkSign,
+    'CALL_ME': generateCallMe,
+    'ROCK_SIGN': generateRockSign,
+    'THREE_FINGERS': generateThreeFingers,
+    'FOUR_FINGERS': generateFourFingers
 };
 
 // ──────────────────────────────────────────────

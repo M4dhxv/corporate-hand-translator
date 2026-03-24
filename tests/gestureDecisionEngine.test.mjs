@@ -13,7 +13,7 @@
  *   6. NONE/null prediction rejection
  *   7. Mixed frame instability
  *   8. Same gesture deduplication
- *   9. Phrase and gestureType correctness for all 5 classes
+ *   9. Phrase and gestureType correctness for all 10 classes
  *  10. Fresh detection after hand loss + return
  *
  * Run: npm test
@@ -35,7 +35,12 @@ function getPhraseForLabel(label) {
         'CLOSED_FIST': "We need to circle back to the core deliverables.",
         'THUMBS_UP': "I am fully aligned with this initiative.",
         'POINTING_UP': "Let's take this offline.",
-        'PEACE_SIGN': "We have verified the cross-functional synergy."
+        'PEACE_SIGN': "We have verified the cross-functional synergy.",
+        'OK_SIGN': "The current plan is on track.",
+        'CALL_ME': "Let's sync one-on-one after this.",
+        'ROCK_SIGN': "This initiative is a top priority.",
+        'THREE_FINGERS': "I have three key points to add.",
+        'FOUR_FINGERS': "Let's review four action items."
     };
     return map[label] || 'Waiting for input…';
 }
@@ -43,7 +48,9 @@ function getPhraseForLabel(label) {
 function getGestureTypeForLabel(label) {
     const map = {
         'OPEN_PALM': 'open-palm', 'CLOSED_FIST': 'fist',
-        'THUMBS_UP': 'thumbs-up', 'POINTING_UP': 'pointing', 'PEACE_SIGN': 'peace'
+        'THUMBS_UP': 'thumbs-up', 'POINTING_UP': 'pointing', 'PEACE_SIGN': 'peace',
+        'OK_SIGN': 'ok-sign', 'CALL_ME': 'call-me', 'ROCK_SIGN': 'rock-sign',
+        'THREE_FINGERS': 'three-fingers', 'FOUR_FINGERS': 'four-fingers'
     };
     return map[label] || null;
 }
@@ -72,7 +79,22 @@ class GestureDecisionEngine {
 
     _applyGates(label, confidence, landmarks) {
         if (label === 'THUMBS_UP' && !this._validateThumbDominance(landmarks)) return 'CLOSED_FIST';
+        if (label === 'CALL_ME' && (!this._validateCallMeGeometry(landmarks) || confidence < 0.60)) return 'CLOSED_FIST';
         return label;
+    }
+
+    // Validate 'Call Me' geometry: thumb and pinky extended, others curled
+    _validateCallMeGeometry(landmarks) {
+        const WRIST = LM.WRIST, THUMB_TIP = LM.THUMB_TIP, INDEX_TIP = LM.INDEX_TIP, MIDDLE_TIP = LM.MIDDLE_TIP, RING_TIP = LM.RING_TIP, PINKY_TIP = LM.PINKY_TIP;
+        const wrist = landmarks[WRIST];
+        const thumbDist = this._dist(wrist, landmarks[THUMB_TIP]);
+        const pinkyDist = this._dist(wrist, landmarks[PINKY_TIP]);
+        const indexDist = this._dist(wrist, landmarks[INDEX_TIP]);
+        const middleDist = this._dist(wrist, landmarks[MIDDLE_TIP]);
+        const ringDist = this._dist(wrist, landmarks[RING_TIP]);
+        const curledMax = Math.max(indexDist, middleDist, ringDist);
+        const EXTENSION_FACTOR = 1.1;
+        return thumbDist > EXTENSION_FACTOR * curledMax && pinkyDist > EXTENSION_FACTOR * curledMax;
     }
 
     _updateBuffer(label, confidence) {
@@ -129,6 +151,7 @@ function assert(cond, msg) {
     else { failed++; console.error(`  ❌ FAIL: ${msg}`); }
 }
 
+
 function makeThumbsUpLandmarks() {
     const lm = Array.from({ length: 21 }, () => ({ x: 0.5, y: 0.5, z: 0 }));
     lm[0] = { x: 0.5, y: 0.5, z: 0 };
@@ -137,6 +160,23 @@ function makeThumbsUpLandmarks() {
     lm[12] = { x: 0.51, y: 0.49, z: 0 }; // middle close
     lm[16] = { x: 0.50, y: 0.50, z: 0 }; // ring close
     lm[20] = { x: 0.49, y: 0.51, z: 0 }; // pinky close
+    return lm;
+}
+
+// Thumb and pinky extended, others curled (for CALL_ME)
+function makeCallMeLandmarks() {
+    const lm = Array.from({ length: 21 }, () => ({ x: 0.5, y: 0.5, z: 0 }));
+    lm[0] = { x: 0.5, y: 0.5, z: 0 };
+    // Thumb extended
+    lm[4] = { x: 0.3, y: 0.2, z: 0 };
+    // Index curled
+    lm[8] = { x: 0.52, y: 0.48, z: 0.1 };
+    // Middle curled
+    lm[12] = { x: 0.53, y: 0.49, z: 0.1 };
+    // Ring curled
+    lm[16] = { x: 0.54, y: 0.50, z: 0.1 };
+    // Pinky extended
+    lm[20] = { x: 0.7, y: 0.2, z: 0 };
     return lm;
 }
 
@@ -258,11 +298,20 @@ console.log('\nTest 9: Phrase & GestureType Correctness — all gestures');
     for (const [lbl, type, phrase] of [
         ['OPEN_PALM', 'open-palm', "Let's put a pin in that for now."],
         ['CLOSED_FIST', 'fist', "We need to circle back to the core deliverables."],
+        ['THUMBS_UP', 'thumbs-up', "I am fully aligned with this initiative."],
         ['POINTING_UP', 'pointing', "Let's take this offline."],
-        ['PEACE_SIGN', 'peace', "We have verified the cross-functional synergy."]
+        ['PEACE_SIGN', 'peace', "We have verified the cross-functional synergy."],
+        ['OK_SIGN', 'ok-sign', "The current plan is on track."],
+        ['CALL_ME', 'call-me', "Let's sync one-on-one after this."],
+        ['ROCK_SIGN', 'rock-sign', "This initiative is a top priority."],
+        ['THREE_FINGERS', 'three-fingers', "I have three key points to add."],
+        ['FOUR_FINGERS', 'four-fingers', "Let's review four action items."]
     ]) {
         engine.reset();
-        const r = feed(pred(lbl), makeThumbsUpLandmarks(), 8);
+        let lm;
+        if (lbl === 'CALL_ME') lm = makeCallMeLandmarks();
+        else lm = makeThumbsUpLandmarks();
+        const r = feed(pred(lbl), lm, 8);
         assert(r?.gestureType === type, `${lbl} → ${type}`);
         assert(r?.phrase === phrase, `${lbl} → correct phrase`);
     }

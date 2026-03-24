@@ -5,9 +5,9 @@
  * and trains a lightweight TensorFlow.js classifier entirely
  * in the browser. No data leaves the device.
  *
- * Architecture: Dense(128, relu) → Dropout(0.3) → Dense(64, relu) → Dense(5, softmax)
+ * Architecture: Dense(128, relu) → Dropout(0.3) → Dense(64, relu) → Dense(NUM_CLASSES, softmax)
  * Input:  [1, 63] — 21 landmarks × 3 coordinates (normalized to wrist)
- * Output: [1, 5]  — probability per gesture class
+ * Output: [1, NUM_CLASSES]  — probability per gesture class
  */
 
 import * as tf from '@tensorflow/tfjs';

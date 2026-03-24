@@ -1,7 +1,7 @@
 /**
  * trainModel.mjs — Offline Model Training Script
  * 
- * Generates synthetic hand landmark data for 5 gesture classes,
+ * Generates synthetic hand landmark data for 10 gesture classes,
  * trains a small feed-forward neural network, and saves the model
  * to public/model/ for browser-side inference via TensorFlow.js.
  * 
@@ -27,7 +27,12 @@ const GESTURE_CLASSES = [
     'CLOSED_FIST',
     'THUMBS_UP',
     'POINTING_UP',
-    'PEACE_SIGN'
+    'PEACE_SIGN',
+    'OK_SIGN',
+    'CALL_ME',
+    'ROCK_SIGN',
+    'THREE_FINGERS',
+    'FOUR_FINGERS'
 ];
 
 const SAMPLES_PER_CLASS = 800;
@@ -215,12 +220,169 @@ function generatePeaceSign() {
     return assembleLandmarks(w, thumb, index, middle, ring, pinky);
 }
 
+/** Generate OK_SIGN: thumb + index touch, middle/ring/pinky extended */
+function generateOkSign() {
+    const base = generateBaseHand();
+    const w = base.wrist;
+
+    const indexMCP = base.indexMCP;
+    const thumbTip = {
+        x: noise(indexMCP.x + 0.01),
+        y: noise(indexMCP.y - 0.02),
+        z: noise(0)
+    };
+    const thumbIP = {
+        x: noise((base.thumbMCP.x + thumbTip.x) * 0.5),
+        y: noise((base.thumbMCP.y + thumbTip.y) * 0.5),
+        z: noise(0)
+    };
+    const thumb = { cmc: base.thumbCMC, mcp: base.thumbMCP, ip: thumbIP, tip: thumbTip };
+
+    const indexPip = { x: noise(indexMCP.x + 0.01), y: noise(indexMCP.y - 0.04), z: noise(0) };
+    const indexDip = { x: noise(indexMCP.x + 0.015), y: noise(indexMCP.y - 0.03), z: noise(0) };
+    const index = { mcp: indexMCP, pip: indexPip, dip: indexDip, tip: thumbTip };
+
+    const mid = extendedFinger(base.middleMCP.x, base.middleMCP.y, rand(0.13, 0.19), rand(-0.01, 0.01));
+    const rng = extendedFinger(base.ringMCP.x, base.ringMCP.y, rand(0.11, 0.17), rand(-0.01, 0.01));
+    const pnk = extendedFinger(base.pinkyMCP.x, base.pinkyMCP.y, rand(0.10, 0.15), rand(-0.02, -0.005));
+
+    const middle = { mcp: base.middleMCP, ...mid };
+    const ring = { mcp: base.ringMCP, ...rng };
+    const pinky = { mcp: base.pinkyMCP, ...pnk };
+
+    return assembleLandmarks(w, thumb, index, middle, ring, pinky);
+}
+
+/** Generate CALL_ME: thumb + pinky extended, other fingers curled
+ *  - Randomizes left/right hand and palm/knuckle facing
+ */
+function generateCallMe() {
+    // Randomly choose left/right hand
+    const isLeft = Math.random() < 0.5;
+    // Randomly choose palm or knuckle facing camera
+    const palmFacing = Math.random() < 0.5;
+
+    // Mirror base hand for left hand
+    function maybeMirrorX(val) {
+        return isLeft ? 1 - val : val;
+    }
+
+    // For palm/knuckle, flip y axis (simulate back of hand)
+    function maybeFlipY(val) {
+        return palmFacing ? val : 1 - val;
+    }
+
+    const base = generateBaseHand();
+    const w = { x: maybeMirrorX(base.wrist.x), y: maybeFlipY(base.wrist.y), z: base.wrist.z };
+
+    // Thumb extended (direction depends on hand)
+    const thumbIP = { x: maybeMirrorX(w.x + (isLeft ? -0.18 : 0.18)), y: maybeFlipY(w.y - 0.10), z: noise(0) };
+    const thumbTip = { x: maybeMirrorX(w.x + (isLeft ? -0.25 : 0.25)), y: maybeFlipY(w.y - 0.12), z: noise(0) };
+    const thumb = {
+        cmc: { x: maybeMirrorX(base.thumbCMC.x), y: maybeFlipY(base.thumbCMC.y), z: base.thumbCMC.z },
+        mcp: { x: maybeMirrorX(base.thumbMCP.x), y: maybeFlipY(base.thumbMCP.y), z: base.thumbMCP.z },
+        ip: thumbIP,
+        tip: thumbTip
+    };
+
+    // Pinky extended (direction depends on hand)
+    const pnk = extendedFinger(
+        maybeMirrorX(base.pinkyMCP.x),
+        maybeFlipY(base.pinkyMCP.y),
+        rand(0.14, 0.20),
+        rand(isLeft ? 0.015 : -0.03, isLeft ? 0.03 : -0.015)
+    );
+
+    // Other fingers curled
+    const idxC = curledFinger(maybeMirrorX(base.indexMCP.x), maybeFlipY(base.indexMCP.y));
+    const midC = curledFinger(maybeMirrorX(base.middleMCP.x), maybeFlipY(base.middleMCP.y));
+    const rngC = curledFinger(maybeMirrorX(base.ringMCP.x), maybeFlipY(base.ringMCP.y));
+
+    const index = { mcp: { x: maybeMirrorX(base.indexMCP.x), y: maybeFlipY(base.indexMCP.y), z: base.indexMCP.z }, ...idxC };
+    const middle = { mcp: { x: maybeMirrorX(base.middleMCP.x), y: maybeFlipY(base.middleMCP.y), z: base.middleMCP.z }, ...midC };
+    const ring = { mcp: { x: maybeMirrorX(base.ringMCP.x), y: maybeFlipY(base.ringMCP.y), z: base.ringMCP.z }, ...rngC };
+    const pinky = { mcp: { x: maybeMirrorX(base.pinkyMCP.x), y: maybeFlipY(base.pinkyMCP.y), z: base.pinkyMCP.z }, ...pnk };
+
+    return assembleLandmarks(w, thumb, index, middle, ring, pinky);
+}
+
+/** Generate ROCK_SIGN: index + pinky extended, middle/ring curled, thumb tucked */
+function generateRockSign() {
+    const base = generateBaseHand();
+    const w = base.wrist;
+
+    const thumbIP = { x: noise(w.x + 0.06), y: noise(w.y - 0.08), z: noise(0) };
+    const thumbTip = { x: noise(w.x + 0.04), y: noise(w.y - 0.06), z: noise(0) };
+    const thumb = { cmc: base.thumbCMC, mcp: base.thumbMCP, ip: thumbIP, tip: thumbTip };
+
+    const idx = extendedFinger(base.indexMCP.x, base.indexMCP.y, rand(0.13, 0.19), rand(-0.01, 0.01));
+    const midC = curledFinger(base.middleMCP.x, base.middleMCP.y);
+    const rngC = curledFinger(base.ringMCP.x, base.ringMCP.y);
+    const pnk = extendedFinger(base.pinkyMCP.x, base.pinkyMCP.y, rand(0.12, 0.18), rand(-0.03, -0.015));
+
+    const index = { mcp: base.indexMCP, ...idx };
+    const middle = { mcp: base.middleMCP, ...midC };
+    const ring = { mcp: base.ringMCP, ...rngC };
+    const pinky = { mcp: base.pinkyMCP, ...pnk };
+
+    return assembleLandmarks(w, thumb, index, middle, ring, pinky);
+}
+
+/** Generate THREE_FINGERS: index/middle/ring extended, thumb+pinky curled */
+function generateThreeFingers() {
+    const base = generateBaseHand();
+    const w = base.wrist;
+
+    const thumbIP = { x: noise(w.x + 0.06), y: noise(w.y - 0.08), z: noise(0) };
+    const thumbTip = { x: noise(w.x + 0.04), y: noise(w.y - 0.06), z: noise(0) };
+    const thumb = { cmc: base.thumbCMC, mcp: base.thumbMCP, ip: thumbIP, tip: thumbTip };
+
+    const idx = extendedFinger(base.indexMCP.x, base.indexMCP.y, rand(0.13, 0.19), rand(-0.01, 0.01));
+    const mid = extendedFinger(base.middleMCP.x, base.middleMCP.y, rand(0.13, 0.19), rand(-0.01, 0.01));
+    const rng = extendedFinger(base.ringMCP.x, base.ringMCP.y, rand(0.11, 0.17), rand(-0.01, 0.01));
+    const pnkC = curledFinger(base.pinkyMCP.x, base.pinkyMCP.y);
+
+    const index = { mcp: base.indexMCP, ...idx };
+    const middle = { mcp: base.middleMCP, ...mid };
+    const ring = { mcp: base.ringMCP, ...rng };
+    const pinky = { mcp: base.pinkyMCP, ...pnkC };
+
+    return assembleLandmarks(w, thumb, index, middle, ring, pinky);
+}
+
+/** Generate FOUR_FINGERS: index/middle/ring/pinky extended, thumb curled */
+function generateFourFingers() {
+    const base = generateBaseHand();
+    const w = base.wrist;
+
+    const thumbIP = { x: noise(w.x + 0.06), y: noise(w.y - 0.08), z: noise(0) };
+    const thumbTip = { x: noise(w.x + 0.04), y: noise(w.y - 0.06), z: noise(0) };
+    const thumb = { cmc: base.thumbCMC, mcp: base.thumbMCP, ip: thumbIP, tip: thumbTip };
+
+    const idx = extendedFinger(base.indexMCP.x, base.indexMCP.y, rand(0.13, 0.19), rand(-0.01, 0.02));
+    const mid = extendedFinger(base.middleMCP.x, base.middleMCP.y, rand(0.13, 0.19), rand(-0.01, 0.01));
+    const rng = extendedFinger(base.ringMCP.x, base.ringMCP.y, rand(0.11, 0.17), rand(-0.01, 0.01));
+    const pnk = extendedFinger(base.pinkyMCP.x, base.pinkyMCP.y, rand(0.10, 0.15), rand(-0.02, -0.005));
+
+    const index = { mcp: base.indexMCP, ...idx };
+    const middle = { mcp: base.middleMCP, ...mid };
+    const ring = { mcp: base.ringMCP, ...rng };
+    const pinky = { mcp: base.pinkyMCP, ...pnk };
+
+    return assembleLandmarks(w, thumb, index, middle, ring, pinky);
+}
+
 const GENERATORS = [
     generateOpenPalm,
     generateClosedFist,
     generateThumbsUp,
     generatePointingUp,
-    generatePeaceSign
+    generatePeaceSign,
+    generateOkSign,
+    generateCallMe,
+    generateRockSign,
+    generateThreeFingers,
+    generateFourFingers
 ];
 
 // ──────────────────────────────────────────────
@@ -300,7 +462,7 @@ function buildModel() {
 
     model.add(tf.layers.dropout({ rate: 0.2 }));
 
-    // Output layer: 5 gesture classes with softmax
+    // Output layer: N gesture classes with softmax
     model.add(tf.layers.dense({
         units: GESTURE_CLASSES.length,
         activation: 'softmax'
@@ -325,7 +487,7 @@ async function main() {
 
     const { xs, ys } = generateDataset();
 
-    console.log('🏗️  Building model (63 → 128 → 64 → 5)...');
+    console.log(`🏗️  Building model (63 → 128 → 64 → ${GESTURE_CLASSES.length})...`);
     const model = buildModel();
     model.summary();
 

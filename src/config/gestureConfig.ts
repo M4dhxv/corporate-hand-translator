@@ -19,7 +19,12 @@ export const GESTURE_LABELS = [
     'CLOSED_FIST',
     'THUMBS_UP',
     'POINTING_UP',
-    'PEACE_SIGN'
+    'PEACE_SIGN',
+    'OK_SIGN',
+    'CALL_ME',
+    'ROCK_SIGN',
+    'THREE_FINGERS',
+    'FOUR_FINGERS'
 ] as const;
 
 /** Union type of all valid gesture labels */
@@ -37,7 +42,12 @@ export const LABEL_TO_PHRASE: Record<GestureLabel, string> = {
     'CLOSED_FIST': "We need to circle back to the core deliverables.",
     'THUMBS_UP': "I am fully aligned with this initiative.",
     'POINTING_UP': "Let's take this offline.",
-    'PEACE_SIGN': "We have verified the cross-functional synergy."
+    'PEACE_SIGN': "We have verified the cross-functional synergy.",
+    'OK_SIGN': "The current plan is on track.",
+    'CALL_ME': "Let's sync one-on-one after this.",
+    'ROCK_SIGN': "This initiative is a top priority.",
+    'THREE_FINGERS': "I have three key points to add.",
+    'FOUR_FINGERS': "Let's review four action items."
 };
 
 // ──────────────────────────────────────────────
@@ -49,7 +59,12 @@ export const LABEL_TO_GESTURE_TYPE: Record<GestureLabel, string> = {
     'CLOSED_FIST': 'fist',
     'THUMBS_UP': 'thumbs-up',
     'POINTING_UP': 'pointing',
-    'PEACE_SIGN': 'peace'
+    'PEACE_SIGN': 'peace',
+    'OK_SIGN': 'ok-sign',
+    'CALL_ME': 'call-me',
+    'ROCK_SIGN': 'rock-sign',
+    'THREE_FINGERS': 'three-fingers',
+    'FOUR_FINGERS': 'four-fingers'
 };
 
 // ──────────────────────────────────────────────
@@ -61,7 +76,12 @@ export const GESTURE_DISPLAY: Record<GestureLabel, GestureDisplayInfo> = {
     'CLOSED_FIST': { emoji: '✊', name: 'Closed Fist' },
     'THUMBS_UP': { emoji: '👍', name: 'Thumbs Up' },
     'POINTING_UP': { emoji: '☝️', name: 'Pointing Up' },
-    'PEACE_SIGN': { emoji: '✌️', name: 'Peace Sign' }
+    'PEACE_SIGN': { emoji: '✌️', name: 'Peace Sign' },
+    'OK_SIGN': { emoji: '👌', name: 'OK Sign' },
+    'CALL_ME': { emoji: '🤙', name: 'Call Me' },
+    'ROCK_SIGN': { emoji: '🤘', name: 'Rock Sign' },
+    'THREE_FINGERS': { emoji: '3️⃣', name: 'Three Fingers' },
+    'FOUR_FINGERS': { emoji: '4️⃣', name: 'Four Fingers' }
 };
 
 /** Reverse lookup: UI gesture type → emoji */
@@ -70,7 +90,12 @@ export const GESTURE_TYPE_TO_EMOJI: Record<string, string> = {
     'fist': '✊',
     'thumbs-up': '👍',
     'pointing': '☝️',
-    'peace': '✌️'
+    'peace': '✌️',
+    'ok-sign': '👌',
+    'call-me': '🤙',
+    'rock-sign': '🤘',
+    'three-fingers': '3️⃣',
+    'four-fingers': '4️⃣'
 };
 
 // ──────────────────────────────────────────────

@@ -185,10 +185,12 @@ export function predictGesture(landmarks: Landmark[]): MLPrediction {
         // Get class probabilities
         const probabilities = prediction.dataSync(); // Float32Array
 
+        const classCount = Math.min(probabilities.length, GESTURE_LABELS.length);
+
         // Find the class with highest confidence
         let maxIdx = 0;
         let maxConf = probabilities[0];
-        for (let i = 1; i < probabilities.length; i++) {
+        for (let i = 1; i < classCount; i++) {
             if (probabilities[i] > maxConf) {
                 maxConf = probabilities[i];
                 maxIdx = i;
@@ -198,7 +200,7 @@ export function predictGesture(landmarks: Landmark[]): MLPrediction {
         // Build probability distribution map for decision engine
         const probMap: Record<string, number> = {};
         for (let i = 0; i < GESTURE_LABELS.length; i++) {
-            probMap[GESTURE_LABELS[i]] = probabilities[i];
+            probMap[GESTURE_LABELS[i]] = i < classCount ? probabilities[i] : 0;
         }
 
         return { maxIdx, maxConf, probMap };

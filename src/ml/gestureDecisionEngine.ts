@@ -141,10 +141,11 @@ class GestureDecisionEngine {
      *
      * Gates (in order):
      *   1. Thumb dominance: if THUMBS_UP, validate thumb extension
-     *   2. Tie-breaking: if close confidence, prefer conservative gesture
+     *   2. Call Me geometry: if CALL_ME, require thumb+pinky extended, others curled
+     *   3. Tie-breaking: if close confidence, prefer conservative gesture
      */
     _applyDecisionGates(label: string, confidence: number, landmarks: Landmark[]): string {
-        // Gate 1: Thumb Dominance
+        // Gate 1: Thumb Dominance for THUMBS_UP
         if (label === 'THUMBS_UP') {
             const isValid = this._validateThumbDominance(landmarks);
             if (!isValid) {
@@ -152,10 +153,40 @@ class GestureDecisionEngine {
             }
         }
 
-        // Gate 2: Tie-breaking (future-compatible)
-        const finalLabel = this._applyTieBreaking(label, confidence, null);
+        // Gate 2: Call Me geometry and confidence for CALL_ME
+        if (label === 'CALL_ME') {
+            const isValid = this._validateCallMeGeometry(landmarks);
+            // Use the same threshold as the rest of the app (from config)
+            const CONFIDENCE_THRESHOLD = 0.60;
+            if (!isValid || confidence < CONFIDENCE_THRESHOLD) {
+                // If not valid or not confident, fallback to most likely confusion (fist)
+                return 'CLOSED_FIST';
+            }
+        }
 
+        // Gate 3: Tie-breaking (future-compatible)
+        const finalLabel = this._applyTieBreaking(label, confidence, null);
         return finalLabel;
+    }
+
+    /**
+     * Validate 'Call Me' gesture geometry: thumb and pinky extended, others curled.
+     * Returns true if geometry matches expected pattern.
+     */
+    _validateCallMeGeometry(landmarks: Landmark[]): boolean {
+        // Indices for tips
+        const WRIST = 0, THUMB_TIP = 4, INDEX_TIP = 8, MIDDLE_TIP = 12, RING_TIP = 16, PINKY_TIP = 20;
+        const wrist = landmarks[WRIST];
+        // Distances from wrist
+        const thumbDist = this._computeDistance(wrist, landmarks[THUMB_TIP]);
+        const pinkyDist = this._computeDistance(wrist, landmarks[PINKY_TIP]);
+        const indexDist = this._computeDistance(wrist, landmarks[INDEX_TIP]);
+        const middleDist = this._computeDistance(wrist, landmarks[MIDDLE_TIP]);
+        const ringDist = this._computeDistance(wrist, landmarks[RING_TIP]);
+        // Require thumb and pinky to be at least 1.1x as extended as the max of the other fingers
+        const curledMax = Math.max(indexDist, middleDist, ringDist);
+        const EXTENSION_FACTOR = 1.1;
+        return thumbDist > EXTENSION_FACTOR * curledMax && pinkyDist > EXTENSION_FACTOR * curledMax;
     }
 
     /**

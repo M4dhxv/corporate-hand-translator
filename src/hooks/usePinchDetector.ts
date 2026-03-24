@@ -5,7 +5,7 @@
  * 1. Thumb (4) + Index (8) tips touching (< 0.06 normalized)
  * 2. Middle (12), Ring (16), Pinky (20) fingers CLOSED
  * 3. Index NOT fully extended upward
- * 4. No conflicting gestures (PEACE, POINTING, OPEN_PALM)
+ * 4. No conflicting gestures (PEACE, POINTING, OPEN_PALM, OK_SIGN)
  * 5. Hold time: 700-900ms continuous
  * 6. 2-second cooldown after trigger
  *
@@ -35,7 +35,7 @@ export function usePinchDetector({ onPinch, currentGestureType }: UsePinchDetect
     const PINCH_COOLDOWN = 2000;
 
     // Conflicting gestures that should suppress pinch
-    const CONFLICTING_GESTURES = ['peace', 'pointing', 'open-palm'];
+    const CONFLICTING_GESTURES = ['peace', 'pointing', 'open-palm', 'ok-sign'];
 
     /**
      * Check if a finger is extended (tip is farther from wrist than joint)
