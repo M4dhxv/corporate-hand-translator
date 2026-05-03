@@ -105,6 +105,39 @@ class GestureDecisionEngine {
     }
 
     /**
+     * Compute distance between any two landmarks.
+     */
+    _computePointDistance(a: Landmark, b: Landmark): number {
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const dz = b.z - a.z;
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    /**
+     * Pick best non-fist label from model probabilities.
+     * If unavailable, default to a conservative open hand fallback.
+     */
+    _pickBestNonFistLabel(probabilities?: Record<string, number>): string {
+        if (!probabilities || Object.keys(probabilities).length === 0) {
+            return 'OPEN_PALM';
+        }
+
+        let bestLabel = 'OPEN_PALM';
+        let bestProb = -1;
+
+        for (const [candidate, prob] of Object.entries(probabilities)) {
+            if (candidate === 'CLOSED_FIST') continue;
+            if (prob > bestProb) {
+                bestProb = prob;
+                bestLabel = candidate;
+            }
+        }
+
+        return bestLabel;
+    }
+
+    /**
      * Check if THUMBS_UP is justified by thumb geometry.
      *
      * Logic:
@@ -145,7 +178,7 @@ class GestureDecisionEngine {
      *   3. Tie-breaking: if close confidence, prefer conservative gesture
      */
     _applyDecisionGates(mlPrediction: MLPrediction, landmarks: Landmark[]): string {
-        const { label, confidence } = mlPrediction;
+        const { label, confidence, probabilities } = mlPrediction;
 
         // Gate 1: Thumb Dominance for THUMBS_UP
         if (label === 'THUMBS_UP') {
@@ -173,6 +206,12 @@ class GestureDecisionEngine {
             // Geometry is more reliable than the single top label for this confusion pair.
             if (looksLikeCallMe) {
                 return 'CALL_ME';
+            }
+
+            // CLOSED_FIST should be emitted only when all fingertips are closed tightly.
+            const isRealFist = this._validateClosedFistGeometry(landmarks);
+            if (!isRealFist) {
+                return this._pickBestNonFistLabel(probabilities);
             }
         }
 
@@ -203,6 +242,17 @@ class GestureDecisionEngine {
         const ringTipDist = this._computeDistance(wrist, landmarks[RING_TIP]);
         const pinkyTipDist = this._computeDistance(wrist, landmarks[PINKY_TIP]);
 
+        const thumbToPinkyDist = this._computePointDistance(landmarks[THUMB_TIP], landmarks[PINKY_TIP]);
+
+        const curledCenter: Landmark = {
+            x: (landmarks[INDEX_TIP].x + landmarks[MIDDLE_TIP].x + landmarks[RING_TIP].x) / 3,
+            y: (landmarks[INDEX_TIP].y + landmarks[MIDDLE_TIP].y + landmarks[RING_TIP].y) / 3,
+            z: (landmarks[INDEX_TIP].z + landmarks[MIDDLE_TIP].z + landmarks[RING_TIP].z) / 3
+        };
+
+        const thumbAwayFromFist = this._computePointDistance(landmarks[THUMB_TIP], curledCenter) > 0.08;
+        const pinkyAwayFromFist = this._computePointDistance(landmarks[PINKY_TIP], curledCenter) > 0.08;
+
         // Thumb + pinky should be clearly farther than curled fingers.
         const curledMax = Math.max(indexTipDist, middleTipDist, ringTipDist);
         const curledAvg = (indexTipDist + middleTipDist + ringTipDist) / 3;
@@ -224,8 +274,55 @@ class GestureDecisionEngine {
             indexCurled &&
             middleCurled &&
             ringCurled &&
-            spreadValid
+            spreadValid &&
+            thumbToPinkyDist > 0.18 &&
+            thumbAwayFromFist &&
+            pinkyAwayFromFist
         );
+    }
+
+    /**
+     * Validate closed fist geometry: all fingertips compact and close together.
+     */
+    _validateClosedFistGeometry(landmarks: Landmark[]): boolean {
+        const WRIST = 0;
+        const THUMB_TIP = 4;
+        const INDEX_TIP = 8;
+        const MIDDLE_TIP = 12;
+        const RING_TIP = 16;
+        const PINKY_TIP = 20;
+
+        const wrist = landmarks[WRIST];
+        const tips = [
+            landmarks[THUMB_TIP],
+            landmarks[INDEX_TIP],
+            landmarks[MIDDLE_TIP],
+            landmarks[RING_TIP],
+            landmarks[PINKY_TIP]
+        ];
+
+        const tipDists = tips.map((tip) => this._computeDistance(wrist, tip));
+        const maxTipDist = Math.max(...tipDists);
+        const minTipDist = Math.min(...tipDists);
+
+        // All fingertips should stay fairly near the wrist for a compact fist.
+        const compactToWrist = maxTipDist < 0.22;
+
+        // Fingertips should be similarly closed (not spread like call-me/open shapes).
+        const uniformClosure = (maxTipDist - minTipDist) < 0.08;
+
+        // Adjacent fingertips should be near each other.
+        const thumbIndex = this._computePointDistance(landmarks[THUMB_TIP], landmarks[INDEX_TIP]);
+        const indexMiddle = this._computePointDistance(landmarks[INDEX_TIP], landmarks[MIDDLE_TIP]);
+        const middleRing = this._computePointDistance(landmarks[MIDDLE_TIP], landmarks[RING_TIP]);
+        const ringPinky = this._computePointDistance(landmarks[RING_TIP], landmarks[PINKY_TIP]);
+        const fingertipsTogether =
+            thumbIndex < 0.16 &&
+            indexMiddle < 0.10 &&
+            middleRing < 0.10 &&
+            ringPinky < 0.10;
+
+        return compactToWrist && uniformClosure && fingertipsTogether;
     }
 
     /**

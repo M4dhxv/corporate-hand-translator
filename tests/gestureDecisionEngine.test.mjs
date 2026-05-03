@@ -69,6 +69,24 @@ class GestureDecisionEngine {
         return Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2 + (b.z - a.z) ** 2);
     }
 
+    _pickBestNonFistLabel(probabilities = {}) {
+        const keys = Object.keys(probabilities);
+        if (keys.length === 0) return 'OPEN_PALM';
+
+        let bestLabel = 'OPEN_PALM';
+        let bestProb = -1;
+
+        for (const [candidate, prob] of Object.entries(probabilities)) {
+            if (candidate === 'CLOSED_FIST') continue;
+            if (prob > bestProb) {
+                bestProb = prob;
+                bestLabel = candidate;
+            }
+        }
+
+        return bestLabel;
+    }
+
     _validateThumbDominance(landmarks) {
         const w = landmarks[LM.WRIST];
         const thumb = this._dist(w, landmarks[LM.THUMB_TIP]);
@@ -78,13 +96,17 @@ class GestureDecisionEngine {
     }
 
     _applyGates(prediction, landmarks) {
-        const { label } = prediction;
+        const { label, probabilities = {} } = prediction;
 
         if (label === 'THUMBS_UP' && !this._validateThumbDominance(landmarks)) return 'CLOSED_FIST';
         if (label === 'CALL_ME' && !this._validateCallMeGeometry(landmarks)) return 'CLOSED_FIST';
 
         if (label === 'CLOSED_FIST' && this._validateCallMeGeometry(landmarks)) {
             return 'CALL_ME';
+        }
+
+        if (label === 'CLOSED_FIST' && !this._validateClosedFistGeometry(landmarks)) {
+            return this._pickBestNonFistLabel(probabilities);
         }
 
         return label;
@@ -106,6 +128,15 @@ class GestureDecisionEngine {
         const middleTipDist = this._dist(wrist, landmarks[MIDDLE_TIP]);
         const ringTipDist = this._dist(wrist, landmarks[RING_TIP]);
         const pinkyTipDist = this._dist(wrist, landmarks[PINKY_TIP]);
+        const thumbToPinkyDist = this._dist(landmarks[THUMB_TIP], landmarks[PINKY_TIP]);
+
+        const curledCenter = {
+            x: (landmarks[INDEX_TIP].x + landmarks[MIDDLE_TIP].x + landmarks[RING_TIP].x) / 3,
+            y: (landmarks[INDEX_TIP].y + landmarks[MIDDLE_TIP].y + landmarks[RING_TIP].y) / 3,
+            z: (landmarks[INDEX_TIP].z + landmarks[MIDDLE_TIP].z + landmarks[RING_TIP].z) / 3
+        };
+        const thumbAwayFromFist = this._dist(landmarks[THUMB_TIP], curledCenter) > 0.08;
+        const pinkyAwayFromFist = this._dist(landmarks[PINKY_TIP], curledCenter) > 0.08;
 
         const curledMax = Math.max(indexTipDist, middleTipDist, ringTipDist);
         const curledAvg = (indexTipDist + middleTipDist + ringTipDist) / 3;
@@ -119,7 +150,54 @@ class GestureDecisionEngine {
 
         const spreadValid = weakerExtended > 0.12 && weakerExtended > curledAvg * 1.05;
 
-        return thumbExtended && pinkyExtended && indexCurled && middleCurled && ringCurled && spreadValid;
+        return (
+            thumbExtended &&
+            pinkyExtended &&
+            indexCurled &&
+            middleCurled &&
+            ringCurled &&
+            spreadValid &&
+            thumbToPinkyDist > 0.18 &&
+            thumbAwayFromFist &&
+            pinkyAwayFromFist
+        );
+    }
+
+    _validateClosedFistGeometry(landmarks) {
+        const WRIST = LM.WRIST;
+        const THUMB_TIP = LM.THUMB_TIP;
+        const INDEX_TIP = LM.INDEX_TIP;
+        const MIDDLE_TIP = LM.MIDDLE_TIP;
+        const RING_TIP = LM.RING_TIP;
+        const PINKY_TIP = LM.PINKY_TIP;
+
+        const wrist = landmarks[WRIST];
+        const tips = [
+            landmarks[THUMB_TIP],
+            landmarks[INDEX_TIP],
+            landmarks[MIDDLE_TIP],
+            landmarks[RING_TIP],
+            landmarks[PINKY_TIP]
+        ];
+
+        const tipDists = tips.map((tip) => this._dist(wrist, tip));
+        const maxTipDist = Math.max(...tipDists);
+        const minTipDist = Math.min(...tipDists);
+
+        const compactToWrist = maxTipDist < 0.22;
+        const uniformClosure = (maxTipDist - minTipDist) < 0.08;
+
+        const thumbIndex = this._dist(landmarks[THUMB_TIP], landmarks[INDEX_TIP]);
+        const indexMiddle = this._dist(landmarks[INDEX_TIP], landmarks[MIDDLE_TIP]);
+        const middleRing = this._dist(landmarks[MIDDLE_TIP], landmarks[RING_TIP]);
+        const ringPinky = this._dist(landmarks[RING_TIP], landmarks[PINKY_TIP]);
+        const fingertipsTogether =
+            thumbIndex < 0.16 &&
+            indexMiddle < 0.10 &&
+            middleRing < 0.10 &&
+            ringPinky < 0.10;
+
+        return compactToWrist && uniformClosure && fingertipsTogether;
     }
 
     _updateBuffer(label, confidence) {
@@ -213,6 +291,17 @@ function makeAmbiguousFist() {
     lm[12] = { x: 0.51, y: 0.37, z: 0 };
     lm[16] = { x: 0.50, y: 0.39, z: 0 };
     lm[20] = { x: 0.49, y: 0.40, z: 0 };
+    return lm;
+}
+
+function makeClosedFistLandmarks() {
+    const lm = Array.from({ length: 21 }, () => ({ x: 0.5, y: 0.5, z: 0 }));
+    lm[0] = { x: 0.5, y: 0.5, z: 0 };
+    lm[4] = { x: 0.45, y: 0.43, z: 0.02 };
+    lm[8] = { x: 0.49, y: 0.42, z: 0.03 };
+    lm[12] = { x: 0.51, y: 0.42, z: 0.03 };
+    lm[16] = { x: 0.53, y: 0.43, z: 0.02 };
+    lm[20] = { x: 0.55, y: 0.44, z: 0.02 };
     return lm;
 }
 
@@ -341,11 +430,21 @@ console.log('\nTest 9: Phrase & GestureType Correctness — all gestures');
         engine.reset();
         let lm;
         if (lbl === 'CALL_ME') lm = makeCallMeLandmarks();
+        else if (lbl === 'CLOSED_FIST') lm = makeClosedFistLandmarks();
         else lm = makeThumbsUpLandmarks();
         const r = feed(pred(lbl), lm, 8);
         assert(r?.gestureType === type, `${lbl} → ${type}`);
         assert(r?.phrase === phrase, `${lbl} → correct phrase`);
     }
+}
+
+console.log('\nTest 11: Fist requires compact closure — non-compact fist rejected');
+{
+    engine.reset();
+    const lm = makeCallMeLandmarks();
+    const p = pred('CLOSED_FIST', 0.9, { CALL_ME: 0.3, OPEN_PALM: 0.2 });
+    const r = feed(p, lm, 8);
+    assert(r?.label === 'CALL_ME', 'CLOSED_FIST + call-me geometry promotes to CALL_ME');
 }
 
 console.log('\nTest 10: Fresh Detection After Hand Loss + Return');
