@@ -144,7 +144,9 @@ class GestureDecisionEngine {
      *   2. Call Me geometry: if CALL_ME, require thumb+pinky extended, others curled
      *   3. Tie-breaking: if close confidence, prefer conservative gesture
      */
-    _applyDecisionGates(label: string, confidence: number, landmarks: Landmark[]): string {
+    _applyDecisionGates(mlPrediction: MLPrediction, landmarks: Landmark[]): string {
+        const { label, confidence } = mlPrediction;
+
         // Gate 1: Thumb Dominance for THUMBS_UP
         if (label === 'THUMBS_UP') {
             const isValid = this._validateThumbDominance(landmarks);
@@ -153,18 +155,28 @@ class GestureDecisionEngine {
             }
         }
 
-        // Gate 2: Call Me geometry and confidence for CALL_ME
+        // Gate 2: Call Me geometry for CALL_ME
         if (label === 'CALL_ME') {
             const isValid = this._validateCallMeGeometry(landmarks);
-            // Use the same threshold as the rest of the app (from config)
-            const CONFIDENCE_THRESHOLD = 0.60;
-            if (!isValid || confidence < CONFIDENCE_THRESHOLD) {
-                // If not valid or not confident, fallback to most likely confusion (fist)
+            if (!isValid) {
+                // If geometry is not valid, fallback to most likely confusion (fist)
                 return 'CLOSED_FIST';
             }
         }
 
-        // Gate 3: Tie-breaking (future-compatible)
+        // Gate 3: Recovery for CALL_ME ↔ CLOSED_FIST confusion
+        // If model predicts fist but hand geometry strongly matches CALL_ME,
+        // promote to CALL_ME when model probabilities are reasonably supportive.
+        if (label === 'CLOSED_FIST') {
+            const looksLikeCallMe = this._validateCallMeGeometry(landmarks);
+
+            // Geometry is more reliable than the single top label for this confusion pair.
+            if (looksLikeCallMe) {
+                return 'CALL_ME';
+            }
+        }
+
+        // Gate 4: Tie-breaking (future-compatible)
         const finalLabel = this._applyTieBreaking(label, confidence, null);
         return finalLabel;
     }
@@ -175,18 +187,45 @@ class GestureDecisionEngine {
      */
     _validateCallMeGeometry(landmarks: Landmark[]): boolean {
         // Indices for tips
-        const WRIST = 0, THUMB_TIP = 4, INDEX_TIP = 8, MIDDLE_TIP = 12, RING_TIP = 16, PINKY_TIP = 20;
+        const WRIST = 0;
+        const THUMB_TIP = 4;
+        const INDEX_TIP = 8;
+        const MIDDLE_TIP = 12;
+        const RING_TIP = 16;
+        const PINKY_TIP = 20;
+
         const wrist = landmarks[WRIST];
-        // Distances from wrist
-        const thumbDist = this._computeDistance(wrist, landmarks[THUMB_TIP]);
-        const pinkyDist = this._computeDistance(wrist, landmarks[PINKY_TIP]);
-        const indexDist = this._computeDistance(wrist, landmarks[INDEX_TIP]);
-        const middleDist = this._computeDistance(wrist, landmarks[MIDDLE_TIP]);
-        const ringDist = this._computeDistance(wrist, landmarks[RING_TIP]);
-        // Require thumb and pinky to be at least 1.1x as extended as the max of the other fingers
-        const curledMax = Math.max(indexDist, middleDist, ringDist);
-        const EXTENSION_FACTOR = 1.1;
-        return thumbDist > EXTENSION_FACTOR * curledMax && pinkyDist > EXTENSION_FACTOR * curledMax;
+
+        // Distances from wrist to finger tips
+        const thumbTipDist = this._computeDistance(wrist, landmarks[THUMB_TIP]);
+        const indexTipDist = this._computeDistance(wrist, landmarks[INDEX_TIP]);
+        const middleTipDist = this._computeDistance(wrist, landmarks[MIDDLE_TIP]);
+        const ringTipDist = this._computeDistance(wrist, landmarks[RING_TIP]);
+        const pinkyTipDist = this._computeDistance(wrist, landmarks[PINKY_TIP]);
+
+        // Thumb + pinky should be clearly farther than curled fingers.
+        const curledMax = Math.max(indexTipDist, middleTipDist, ringTipDist);
+        const curledAvg = (indexTipDist + middleTipDist + ringTipDist) / 3;
+        const thumbExtended = thumbTipDist > curledMax * 1.06;
+        const pinkyExtended = pinkyTipDist > curledMax * 1.06;
+
+        // Curled fingers should stay below the weaker extended finger.
+        const weakerExtended = Math.min(thumbTipDist, pinkyTipDist);
+        const indexCurled = indexTipDist < weakerExtended * 0.95;
+        const middleCurled = middleTipDist < weakerExtended * 0.95;
+        const ringCurled = ringTipDist < weakerExtended * 0.95;
+
+        // Guard against tiny/noisy hand detections.
+        const spreadValid = weakerExtended > 0.12 && weakerExtended > curledAvg * 1.05;
+
+        return (
+            thumbExtended &&
+            pinkyExtended &&
+            indexCurled &&
+            middleCurled &&
+            ringCurled &&
+            spreadValid
+        );
     }
 
     /**
@@ -258,7 +297,7 @@ class GestureDecisionEngine {
         }
 
         // Apply decision gates (thumb dominance, tie-breaking)
-        const gatedLabel = this._applyDecisionGates(label, confidence, landmarks);
+        const gatedLabel = this._applyDecisionGates(mlPrediction, landmarks);
 
         // Map gated label to phrase and gestureType
         const finalGestureType = this._labelToGestureType(gatedLabel);

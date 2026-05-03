@@ -77,24 +77,49 @@ class GestureDecisionEngine {
         return thumb > THUMB_DOMINANCE_THRESHOLD * Math.max(...others);
     }
 
-    _applyGates(label, confidence, landmarks) {
+    _applyGates(prediction, landmarks) {
+        const { label } = prediction;
+
         if (label === 'THUMBS_UP' && !this._validateThumbDominance(landmarks)) return 'CLOSED_FIST';
-        if (label === 'CALL_ME' && (!this._validateCallMeGeometry(landmarks) || confidence < 0.60)) return 'CLOSED_FIST';
+        if (label === 'CALL_ME' && !this._validateCallMeGeometry(landmarks)) return 'CLOSED_FIST';
+
+        if (label === 'CLOSED_FIST' && this._validateCallMeGeometry(landmarks)) {
+            return 'CALL_ME';
+        }
+
         return label;
     }
 
     // Validate 'Call Me' geometry: thumb and pinky extended, others curled
     _validateCallMeGeometry(landmarks) {
-        const WRIST = LM.WRIST, THUMB_TIP = LM.THUMB_TIP, INDEX_TIP = LM.INDEX_TIP, MIDDLE_TIP = LM.MIDDLE_TIP, RING_TIP = LM.RING_TIP, PINKY_TIP = LM.PINKY_TIP;
+        const WRIST = LM.WRIST;
+        const THUMB_TIP = LM.THUMB_TIP;
+        const INDEX_TIP = LM.INDEX_TIP;
+        const MIDDLE_TIP = LM.MIDDLE_TIP;
+        const RING_TIP = LM.RING_TIP;
+        const PINKY_TIP = LM.PINKY_TIP;
+
         const wrist = landmarks[WRIST];
-        const thumbDist = this._dist(wrist, landmarks[THUMB_TIP]);
-        const pinkyDist = this._dist(wrist, landmarks[PINKY_TIP]);
-        const indexDist = this._dist(wrist, landmarks[INDEX_TIP]);
-        const middleDist = this._dist(wrist, landmarks[MIDDLE_TIP]);
-        const ringDist = this._dist(wrist, landmarks[RING_TIP]);
-        const curledMax = Math.max(indexDist, middleDist, ringDist);
-        const EXTENSION_FACTOR = 1.1;
-        return thumbDist > EXTENSION_FACTOR * curledMax && pinkyDist > EXTENSION_FACTOR * curledMax;
+
+        const thumbTipDist = this._dist(wrist, landmarks[THUMB_TIP]);
+        const indexTipDist = this._dist(wrist, landmarks[INDEX_TIP]);
+        const middleTipDist = this._dist(wrist, landmarks[MIDDLE_TIP]);
+        const ringTipDist = this._dist(wrist, landmarks[RING_TIP]);
+        const pinkyTipDist = this._dist(wrist, landmarks[PINKY_TIP]);
+
+        const curledMax = Math.max(indexTipDist, middleTipDist, ringTipDist);
+        const curledAvg = (indexTipDist + middleTipDist + ringTipDist) / 3;
+        const thumbExtended = thumbTipDist > curledMax * 1.06;
+        const pinkyExtended = pinkyTipDist > curledMax * 1.06;
+
+        const weakerExtended = Math.min(thumbTipDist, pinkyTipDist);
+        const indexCurled = indexTipDist < weakerExtended * 0.95;
+        const middleCurled = middleTipDist < weakerExtended * 0.95;
+        const ringCurled = ringTipDist < weakerExtended * 0.95;
+
+        const spreadValid = weakerExtended > 0.12 && weakerExtended > curledAvg * 1.05;
+
+        return thumbExtended && pinkyExtended && indexCurled && middleCurled && ringCurled && spreadValid;
     }
 
     _updateBuffer(label, confidence) {
@@ -118,7 +143,7 @@ class GestureDecisionEngine {
         if (!label || label === 'NONE') return null;
         if (this._isInCooldown()) return null;
 
-        const gated = this._applyGates(label, confidence, landmarks);
+        const gated = this._applyGates(pred, landmarks);
         const stable = this._updateBuffer(gated, confidence);
 
         if (stable && stable !== this.acceptedGesture) {
@@ -191,8 +216,14 @@ function makeAmbiguousFist() {
     return lm;
 }
 
-function pred(label, conf = 0.9) {
-    return { label, confidence: conf, gestureType: getGestureTypeForLabel(label), phrase: getPhraseForLabel(label) };
+function pred(label, conf = 0.9, probabilities = {}) {
+    return {
+        label,
+        confidence: conf,
+        gestureType: getGestureTypeForLabel(label),
+        phrase: getPhraseForLabel(label),
+        probabilities
+    };
 }
 
 function feed(p, lm, n) {
